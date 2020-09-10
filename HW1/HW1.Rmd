@@ -1,0 +1,49 @@
+---
+title: 'Assignment #1'
+author: "Ethan Jantz"
+date: "9/10/2020"
+output: html_document
+---
+
+This document is made using [R Markdown](https://rmarkdown.rstudio.com/), a great tool for sharing research in a way that is readable and easily reproducible. 
+
+#### Assignment Outline:
+
+Pick 3 variables from the data file that you want to transform into new variables. At least one of the variables has to be a categorical variable. Describe how each is currently coded and provide frequencies for each variable.
+
+Describe how you transform each into a new variable and provide the R Studio syntax used to do the transformation. Provide frequencies for each new variable.
+
+Using a categorical variable with at least 3 response options, provide a frequency for the variable. Then, exclude respondents who gave one of the possible response options and produce frequencies for the remaining groups. Provide the R Studio syntax and output for this.
+
+For this and all other assignments, please provide text describing what you did and present the information in a way that is clear and easy to follow (so that someone could replicate it if necessary). Please do not just use bullet points or R Studio output. 
+
+#### Setup
+
+```{r setup, echo = TRUE, message = FALSE, warning = FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE) # R Markdown options
+library(tidyverse)
+library(rmarkdown) # For accessing the functions used to display tables
+library(haven) # For reading ANES2016.dta file
+library(here) # For easier file referencing. See documentation at https://here.r-lib.org/
+
+anes <- haven::read_dta("ANES2016.dta") # Reading in the data
+```
+<br>
+
+#### Exploring the Data
+
+There are a *lot* of variables to pick from. Using the dim() function, we can see the number of rows and columns: `r dim(anes) # The dim function returns the dimensions of an object`
+
+```{r explore}
+head(anes) %>% # The head function returns the first 6 rows of an object 
+  paged_table() # The paged_table function takes head(anes) and displays it in the document
+
+```
+
+From here, I'm going to reference the ANES Code Book and pick three variables(columns) that I'm interested in.
+
+| Variable Name (dta) | Variable Name (code book) | Type of Variable |
+|:--------------------|--------------------------:|-----------------:|
+|V168023| Estimated family income| Categorical|
+|V167501| Number of campaign or political signs visible in the structure's window(s)| Ratio|
+|V167558| Relative to the other buildings on the road, is the physical condition of the building better, worse, or the same? | Categorical
