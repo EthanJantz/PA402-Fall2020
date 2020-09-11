@@ -2,13 +2,18 @@
 title: 'Assignment #1'
 author: "Ethan Jantz"
 date: "9/10/2020"
-output: 
+output:
+  word_document:
+    toc: no
   html_document:
-      toc: true
-      toc_float: true
+    toc: yes
+    toc_float: yes
+always_allow_html: true
 ---
 
 This document is made using [R Markdown](https://rmarkdown.rstudio.com/), a great tool for sharing research in a way that is readable and easily reproducible. 
+
+***
 
 ### Assignment 1
 
@@ -19,6 +24,8 @@ Describe how you transform each into a new variable and provide the R Studio syn
 Using a categorical variable with at least 3 response options, provide a frequency for the variable. Then, exclude respondents who gave one of the possible response options and produce frequencies for the remaining groups. Provide the R Studio syntax and output for this.
 
 For this and all other assignments, please provide text describing what you did and present the information in a way that is clear and easy to follow (so that someone could replicate it if necessary). Please do not just use bullet points or R Studio output. 
+
+***
 
 ### Setup
 
