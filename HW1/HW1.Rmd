@@ -202,9 +202,8 @@ selected %>%
   paged_table()
 ```
 
-And since we would likely be using this dataset, let's export it too.
+And since we would likely be using this dataset in the real world, let's export it too.
 
-```{r export, message = FALSE}
-write.csv("ANES_selected.csv") # Export the final dataset to the project folder as .csv
-# Ignore the extra text below this. I'm not sure how to remove it.
+```{r export}
+write.csv(selected, "ANES_selected.csv") # Export the final dataset to the project folder as .csv
 ```
