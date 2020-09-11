@@ -2,12 +2,15 @@
 title: 'Assignment #1'
 author: "Ethan Jantz"
 date: "9/10/2020"
-output: html_document
+output: 
+  html_document:
+      toc: true
+      toc_float: true
 ---
 
 This document is made using [R Markdown](https://rmarkdown.rstudio.com/), a great tool for sharing research in a way that is readable and easily reproducible. 
 
-#### Assignment Outline:
+### Assignment 1
 
 Pick 3 variables from the data file that you want to transform into new variables. At least one of the variables has to be a categorical variable. Describe how each is currently coded and provide frequencies for each variable.
 
@@ -17,7 +20,7 @@ Using a categorical variable with at least 3 response options, provide a frequen
 
 For this and all other assignments, please provide text describing what you did and present the information in a way that is clear and easy to follow (so that someone could replicate it if necessary). Please do not just use bullet points or R Studio output. 
 
-#### Setup
+### Setup
 
 ```{r setup, echo = TRUE, message = FALSE, warning = FALSE}
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE) # R Markdown options
@@ -28,22 +31,180 @@ library(here) # For easier file referencing. See documentation at https://here.r
 
 anes <- haven::read_dta("ANES2016.dta") # Reading in the data
 ```
-<br>
 
-#### Exploring the Data
+### Exploring the Data
 
 There are a *lot* of variables to pick from. Using the dim() function, we can see the number of rows and columns: `r dim(anes) # The dim function returns the dimensions of an object`
 
 ```{r explore}
 head(anes) %>% # The head function returns the first 6 rows of an object 
   paged_table() # The paged_table function takes head(anes) and displays it in the document
-
 ```
 
-From here, I'm going to reference the ANES Code Book and pick three variables(columns) that I'm interested in.
+From here, I'm going to reference the ANES Code Book and pick some variables that I'm interested in.
 
 | Variable Name (dta) | Variable Name (code book) | Type of Variable |
 |:--------------------|--------------------------:|-----------------:|
 |V168023| Estimated family income| Categorical|
-|V167501| Number of campaign or political signs visible in the structure's window(s)| Ratio|
-|V167558| Relative to the other buildings on the road, is the physical condition of the building better, worse, or the same? | Categorical
+|V162139| Importance of reducing deficit| Ordinal|
+|V162002| Post: How many programs about 2016 campaign did R watch on TV| Ordinal|
+<!-- |V167501| Number of campaign or political signs visible in the structure's window(s)| Ratio| -->
+<!-- |V167558| Relative to the other buildings on the road, is the physical condition of the building better, worse, or the same? | Categorical| -->
+<!-- |V162134| How much opportunity in America to get ahead| Ordinal| -->
+
+Let's create a new dataframe object that consists of only the selected variables. Here is the result:
+
+```{r subset}
+selected <- anes %>% # Here I use the select function to select and rename the variables being studied
+  select(
+    "FamIncome" = V168023,
+    "Deficit" = V162139,
+    "TVPrograms" = V162002
+    )
+
+selected %>%
+  paged_table() # Finally, display the new dataframe
+```
+
+### Variable Description
+
+I've selected several variables, and now I'm going to transform and explore them. I'll start with **V168023**. The procedure here will be to explain how each variable is coded and display the frequencies of the variable.
+
+##### **V168023**: Estimated Family Income
+This is the categorical variable I will be focusing on. It breaks the respondent down into 7 categories of family income. Here is a list of the categories and their associated variable code:
+
+1.  Under $15,000
+2. $15,000 to $29,999
+3. $30,000 to $49,999
+4. $50,000 to $74,999
+5. $75,000 to $99,999
+6. $100,000 to $249,999
+7. $250,000 or more
+
+Other variable codes include **-9** Refused, **-8** Don't know, and **-1** Inap (inapplicable).
+
+Below is the frequency table for this variable:
+
+```{r echo = FALSE}
+selected$FamIncome %>%  
+  table()
+```
+
+##### **V162139**: Post-Election - Importance of Reducing Deficit
+This response, collected after the election, asks the respondent their feelings on the importance of reducing the federal budget deficit. It breaks down into 5 options:
+
+1. Extremely important
+2. Very important
+3. Moderately important
+4. A little important
+5. Not at all important
+
+Other variable codes include **-9** Refused, **-8** Don't know, **-7** No post data, **-6** No post-election interview.
+
+Below is the frequency table for this variable:
+
+```{r echo = FALSE}
+selected$Deficit %>%  
+  table()
+```
+
+##### **V162002**: Post-Election - How Many Programs About 2016 Campaign Did R Watch on TV
+This response, collected after the election, asks the respondent how many programs about the 2016 campaign they watched on television. It breaks down into 4 responses:
+
+1. None
+2. Just one or two
+3. Several
+4. A good many
+
+Other variable codes include **-7** No post data and **-6** No post-election interview.
+
+Below is the frequency table for this variable:
+
+```{r echo = FALSE}
+selected$TVPrograms %>%  
+  table()
+```
+
+<!-- ##### **V167501**: Number of Campaign Signs Visible in the Structure's Window -->
+
+<!-- ##### **V167558**: Building Condition Relative to Others on Road -->
+
+<!-- ##### **V162134**: Perspective on Opportunity in America -->
+
+### Variable Transformation
+
+In the following chunk I will be removing observations where the variables can't be used for analysis and outputting a new frequency table for each variable. 
+
+```{r transform, echo = TRUE}
+selected <- selected %>%
+  filter(
+    FamIncome >= 0, # All values below 0 are refused, don't know, or inapplicable
+    Deficit > 0, # Negative values are inapplicable, don't know, refused, etc
+    TVPrograms > 0 # Negative values are innaplicable, don't know, refused, etc
+    )
+```
+
+##### **Family Income**
+```{r echo = FALSE}
+selected$FamIncome %>%  
+  table()
+```
+
+##### **Deficit Sentiment**
+```{r echo = FALSE}
+selected$Deficit %>%  
+  table()
+```
+
+##### **Campaign Programs Seen on TV**
+```{r echo = FALSE}
+selected$TVPrograms %>%  
+  table()
+```
+
+One thing to note at this point is the downsizing we just performed on this data set. The original dataset had **`r dim(anes)[1]`** observations, while this transformed dataset has **`r round(dim(selected)[1]/dim(anes)[1]*100, 0)`%** of that at **`r dim(selected)[1]`** observations. We could have replaced the unusable values with NA (or null), but if we want to perform more thorough analysis on this dataset we need complete observations across variables.  
+
+### Categorical Exclusion
+
+Finally, let's see what happens to our data when we exclude the responses of respondents who were in the lowest income bracket:
+
+```{r echo = TRUE}
+selected <- selected %>%
+  filter(
+    FamIncome != 1 # !# is a unary operator that means "not". So you can read this as "Only keep the rows where FamIncome is NOT 1"
+  )
+```
+
+##### **Family Income**
+```{r echo = FALSE}
+selected$FamIncome %>%  
+  table()
+```
+
+##### **Deficit Sentiment**
+```{r echo = FALSE}
+selected$Deficit %>%  
+  table()
+```
+
+##### **Campaign Programs Seen on TV**
+```{r echo = FALSE}
+selected$TVPrograms %>%  
+  table()
+```
+
+### Conclusion
+
+After all of this data wrangling, here is the final product. Our new ANES dataset, exported into a tidy comma separated values format:
+
+```{r fin}
+selected %>%
+  paged_table()
+```
+
+And since we would likely be using this dataset, let's export it too.
+
+```{r export, message = FALSE}
+write.csv("ANES_selected.csv") # Export the final dataset to the project folder as .csv
+# Ignore the extra text below this. I'm not sure how to remove it.
+```
