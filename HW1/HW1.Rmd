@@ -3,11 +3,11 @@ title: 'Assignment #1'
 author: "Ethan Jantz"
 date: "9/10/2020"
 output:
-  word_document:
-    toc: no
   html_document:
     toc: yes
     toc_float: yes
+  word_document:
+    toc: no
 always_allow_html: true
 ---
 
@@ -140,7 +140,7 @@ selected$TVPrograms %>%
 
 ### Variable Transformation
 
-In the following chunk I will be removing observations where the variables can't be used for analysis and outputting a new frequency table for each variable. 
+In the following chunk I will be removing observations where the variables can't be used for analysis. From there I will factor the FamIncome variable, which will provide labels for the categories. Aftwards I will output the resulting frequency tables for each variable.
 
 ```{r transform, echo = TRUE}
 selected <- selected %>%
@@ -149,6 +149,19 @@ selected <- selected %>%
     Deficit > 0, # Negative values are inapplicable, don't know, refused, etc
     TVPrograms > 0 # Negative values are innaplicable, don't know, refused, etc
     )
+
+selected$FamIncome <- factor(
+    selected$FamIncome,
+    labels = c(
+      "Under $15,000",
+      "$15,000 to $29,999",
+      "$30,000 to $49,999",
+      "$50,000 to $74,999",
+      "$75,000 to $99,999",
+      "$100,000 to $249,999",
+      "$250,000 or more"
+    )
+  )
 ```
 
 ##### **Family Income**
@@ -178,7 +191,7 @@ Finally, let's see what happens to our data when we exclude the responses of res
 ```{r echo = TRUE}
 selected <- selected %>%
   filter(
-    FamIncome != 1 # !# is a unary operator that means "not". So you can read this as "Only keep the rows where FamIncome is NOT 1"
+    as.integer(FamIncome) > 1 
   )
 ```
 
