@@ -1,0 +1,185 @@
+---
+title: "Assignment #2"
+author: "Ethan Jantz"
+date: "9/22/2020"
+output:
+  word_document:
+    toc: no
+  html_document:
+    toc: yes
+    toc_float: yes
+always_allow_html: true
+---
+
+This document is made using [R Markdown](https://rmarkdown.rstudio.com/), a great tool for sharing research in a way that is readable and easily reproducible. 
+
+***
+
+Choose three variables that you believe measure the same underlying construct or idea. 
+
+Recode each item onto the same metric (e.g., 0-1 scaling).
+
+Provide frequencies for each variable before and after it is recoded (old and new variables).
+
+Calculate the alpha reliability coefficient for the scale.
+
+Report the coefficient and what it means.
+
+Finally, average the three new variables into an index and run a frequency of the index variable.
+
+Provide all syntax used, and frequencies for each original variable and rescaled variable and the overall index.
+
+***
+
+```{r setup, echo = TRUE, message = FALSE, warning = FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE) # R Markdown options
+library(psych); library(ltm) 
+library(tidyverse)
+library(rmarkdown) # For accessing the functions used to display tables
+library(haven) # For reading ANES2016.dta file
+library(here) # For easier file referencing. See documentation at https://here.r-lib.org/
+
+anes <- haven::read_dta("ANES2016.dta") # Reading in the data
+```
+
+### Conceptual Variables
+
+The construct here that I want to explore is class sentiment under economic pressure, or how the disenfranchised feel about those better off. The variables that I will use to explore it are listed below, with a brief explanation as to where they fit into this construct.
+
+| Variable Name (dta) | Variable Name (code book) | Construct Relation | Scale |
+|:--------------------|--------------------------:| ---------:| -----:|
+|**V168023**| Estimated family income| The income situation of the respondent | 1 - 7 |
+|**V162166**| Able to make housing payments| Provides a proxy for scale of economic pressure that the respondent experiences | 1 - 5 |
+|**V162105**| Feeling thermometer: RICH PEOPLE| The sentiment that the respondent has for rich people | 1 - 100 |
+
+```{r select}
+selected <- 
+  anes %>%
+  dplyr::select(
+    "Income" = V168023,
+    "Housing.Security" = V162166,
+    "Sentiment.RichPeople" = V162105
+  )
+```
+
+So let's start by taking these variables and recoding them. Along the way we'll clean the data and make sure that we clear out any incomplete responses, since we want to know the full profile of our respondents for analysis.
+
+### Recoding the Variables
+
+We'll start by removing observations where the profile is incomplete for the respondent, meaning that the respondent didn't provide answers for each questions.
+
+```{r narm}
+selected <-
+  selected %>% 
+  dplyr::filter(
+    Income >= 1,
+    Housing.Security >= 0,
+    Sentiment.RichPeople >= 0 & Sentiment.RichPeople <= 100
+  )
+```
+
+And just to check, the min for each variable should now be 0 or more 
+`r describe(selected) %>% paged_table()`
+
+### Variable Values
+
+##### **V168023**: Estimated Family Income
+This is the estimated family income of the respondent.
+
+1.  Under $15,000
+2. $15,000 to $29,999
+3. $30,000 to $49,999
+4. $50,000 to $74,999
+5. $75,000 to $99,999
+6. $100,000 to $249,999
+7. $250,000 or more
+
+and the frequency table
+
+```{r}
+table(selected$Income)
+```
+
+This is simple, each category refers to an income bracket that increases in quantity with the variable. I will divide it by 7, creating a scale of the following possible values: `r round(c(1,2,3,4,5,6,7) / 7, 2)`
+
+##### **V162166**: Housing Security
+Respondents answered the question: During the next 12 months, how likely is it that you will be able to make all of your rent/mortgage payments on time?
+
+1. Extremely likely
+2. Very likely
+3. Moderately likely
+4. Slightly likely
+5. Not likely at all
+
+and the frequency table
+
+```{r}
+table(selected$Housing.Security)
+```
+
+This variable needs a change. I want "Extremely likely" to be the highest value and "Not likely at all" to be the lowest value. I'll solve this by dividing it by 5 and multiplying it by -1, then adding 1. This will result in a scale of the following possible values: `r c(1,2,3,4,5) / 5 * -1 + 1`
+
+##### **V162105**: Sentiment: Rich People
+This variable scales from 0 - 100, with 0 being the lowest possible rating of rich people and 100 being the highest. I will divide it by 100 to put it on a scale from 0 - 1. Here is a a table and histogram of the distribution:
+```{r} 
+table(selected$Sentiment.RichPeople)
+hist(selected$Sentiment.RichPeople)
+```
+
+Looking at this histogram, we can see that the distribution of "Rich People" sentiment is slightly left skewed, indicating a preference for positive ratings. By looking at the frequency tables for the other variables we can also say that most respondents felt like it was "extremely likely" they would make all of their rent/mortgage payments on time over the next 12 months, and that most respondents' family income was between $15,000 and $74,999 per year.
+
+### Transforming Variables
+
+Now I'll transform the variables as described above.
+
+```{r recode}
+recoded <- 
+  selected %>%
+  mutate (
+    Income = round(as.numeric(Income) / 7, 2),
+    Housing.Security = as.numeric(Housing.Security) / 5 * -1 + 1,
+    Sentiment.RichPeople = as.numeric(Sentiment.RichPeople) / 100
+  )
+```
+
+And let's make sure we did that right:
+
+```{r}
+summary(recoded)
+```
+
+### Alpha Reliability Coefficient
+
+I'll check the Alpha Reliability Coefficient to measure the reliability of this construct:
+
+```{r}
+cronbach.alpha(recoded)
+```
+
+I'm curious what would happen if I removed a variable:
+
+```{r}
+cronbach.alpha(recoded %>% dplyr::select(-Housing.Security))
+```
+
+According to [this](https://data.library.virginia.edu/using-and-interpreting-cronbachs-alpha/) page from the University of Virginia:
+
+> the higher the α coefficient, the more the items have shared covariance and probably measure the same underlying concept.
+
+With such a low Alpha Reliability Coefficient these variables don't have a shared covariance, meaning they don't seem to measure the same "concept." 
+
+### Creating an Index
+
+Finally, let's create an index of these variables and look at the descriptive statistics.
+
+```{r index}
+recoded <- 
+  recoded %>%
+  mutate(
+    index = rowSums(recoded) / 3
+  )
+
+describe(recoded$index)
+
+hist(recoded$index)
+```

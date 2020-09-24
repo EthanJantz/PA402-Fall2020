@@ -3,11 +3,11 @@ title: 'Assignment #1'
 author: "Ethan Jantz"
 date: "9/10/2020"
 output:
+  word_document:
+    toc: no
   html_document:
     toc: yes
     toc_float: yes
-  word_document:
-    toc: no
 always_allow_html: true
 ---
 
