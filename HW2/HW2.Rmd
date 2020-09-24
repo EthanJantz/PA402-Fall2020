@@ -3,11 +3,11 @@ title: "Assignment #2"
 author: "Ethan Jantz"
 date: "9/22/2020"
 output:
-  word_document:
-    toc: no
   html_document:
     toc: yes
     toc_float: yes
+  word_document:
+    toc: no
 always_allow_html: true
 ---
 
@@ -33,7 +33,7 @@ Provide all syntax used, and frequencies for each original variable and rescaled
 
 ```{r setup, echo = TRUE, message = FALSE, warning = FALSE}
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE) # R Markdown options
-library(psych); library(ltm) 
+library(psych); library(ltm) # psych for describe(), ltm for cronbach.alpha()
 library(tidyverse)
 library(rmarkdown) # For accessing the functions used to display tables
 library(haven) # For reading ANES2016.dta file
@@ -79,7 +79,7 @@ selected <-
 ```
 
 And just to check, the min for each variable should now be 0 or more 
-`r describe(selected) %>% paged_table()`
+`r describe(selected)[c(3,8)] %>% paged_table()`
 
 ### Variable Values
 
@@ -145,7 +145,9 @@ recoded <-
 And let's make sure we did that right:
 
 ```{r}
-summary(recoded)
+table(recoded$Income)
+table(recoded$Housing.Security)
+table(recoded$Sentiment.RichPeople)
 ```
 
 ### Alpha Reliability Coefficient
@@ -166,11 +168,13 @@ According to [this](https://data.library.virginia.edu/using-and-interpreting-cro
 
 > the higher the α coefficient, the more the items have shared covariance and probably measure the same underlying concept.
 
-With such a low Alpha Reliability Coefficient these variables don't have a shared covariance, meaning they don't seem to measure the same "concept." 
+With such a low Alpha Reliability Coefficient these variables don't have a shared covariance, meaning they don't seem to measure the same "concept." However, there is reason to critically examine the usage of Cronbach's Alpha, its common metrics and usages, and what that alpha really means. In an [article](https://journals-sagepub-com.proxy.cc.uic.edu/doi/full/10.1177/1094428114555994) from the journal of Organizational Research Methods, researchers Cho and Kim discuss the "common misconceptions" about Cronbach's Alpha Coefficient. Among their recommendations, they emphasize that "assumptions of unidimensionality and tau-equivalency be examined before applying this alpha. I won't be doing that in this homework, but I did feel it was worth noting. The values I'm exploring may not be unidimensional, which would limit the usefulness of Cronbach's Alpha in interpretation.
 
 ### Creating an Index
 
 Finally, let's create an index of these variables and look at the descriptive statistics.
+
+And what does this index mean? Well, a value close to 0 would mean that the respondent was in a low income bracket, felt that their ability to make consistent housing payments over the next 12 months was less likely, and had a negative sentiment towards "Rich People." A value close to 1 would mean that the respondent was in a high income bracket, felt confident in their ability to pay their housing payments, and also had a positive sentiment towards "Rich People." Considering the [complex](https://www.pewsocialtrends.org/2012/01/11/rising-share-of-americans-see-conflict-between-rich-and-poor/) [relationship](https://thefinancialbrand.com/81842/americans-relationship-money-wealth-rich-financial/) Americans have with wealth - and the wealthy - I think that this index may not be the best measure of the construct I was trying to build.
 
 ```{r index}
 recoded <- 
@@ -180,6 +184,7 @@ recoded <-
   )
 
 describe(recoded$index)
-
 hist(recoded$index)
 ```
+
+Looking at the frequency distribution of index values in the histogram we can see that respondents tended to have an index value above .5, with half of respondents falling above .59. There was a standard deviation of .13, meaning that most respondents fell within .13 of the mean index value of .58. So by nature of the index construct, most respondents are at least of moderate income, feel confident in their ability to make housing payments over the next 12 months, and have a positive sentiment towards "Rich People." In retrospect, this one-dimensional index doesn't provide a robust measurement of the construct I was trying to explore. 
