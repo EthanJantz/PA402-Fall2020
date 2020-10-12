@@ -1,0 +1,124 @@
+---
+title: 'Assignment #3'
+author: "Ethan Jantz"
+date: "10/6/2020"
+output:
+  html_document:
+    toc: yes
+    toc_float: yes
+  word_document:
+    toc: no
+always_allow_html: true
+---
+
+This document is made using [R Markdown](https://rmarkdown.rstudio.com/), a great tool for sharing research in a way that is readable and easily reproducible. 
+
+***
+
+Part A:
+
+    Select two categorical variables.
+        Provide relevant descriptive statistics (frequencies, modal response) for these variables and the syntax used to do so.
+    Select two continuous (ordinal, interval, or ratio) variables.
+        Provide relevant descriptive statistics (mean, median, measures of dispersion).
+
+Part B:
+
+    Choose a dichotomous categorical variable (or simplify categorical variables with more than two categories).
+        First, test whether the proportion of respondents giving a particular response is significantly different from 50%.
+        Second, test whether the proportion of respondents giving the response is significantly different from 25%.
+    Next, choose a continuous (ordinal, interval, or ratio) variable.
+        First test whether the mean of the variable is significantly different from zero (0).
+        Second, test whether the mean of the variable is significantly different from one (1).
+    Provide all R code and text to accompany and describe what you did and the results.
+
+
+***
+
+```{r setup, echo = TRUE, message = FALSE, warning = FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE) # R Markdown options
+library(psych); library(ltm) # psych for describe(), ltm for cronbach.alpha()
+library(tidyverse)
+library(rmarkdown) # For accessing the functions used to display tables
+library(haven) # For reading ANES2016.dta file
+library(here) # For easier file referencing. See documentation at https://here.r-lib.org/
+
+anes <- haven::read_dta("ANES2016.dta") # Reading in the data
+```
+
+### Part A
+
+```{r select}
+selected <- 
+  anes %>%
+  select(
+    "State" = V161015b,
+    "Pres_Vote" = V161027,
+    "Dem" = V161086,
+    "Rep" = V161086
+    )
+```
+
+In a previous version of this I filtered the data 
+
+#### Categorical Variables
+
+| Variable Code (dta) | Variable Name (code book) | Categories |
+|:--------------------|--------------------------:| ----------:|
+|**V161015b**| Registration state (all registrations)|  All 50 states + DC and PR|
+|**V161027**|  For whom did R vote for President| Hillary Clinton, Donald Trump, Gary Johnson, Jill Stein, Other |
+
+##### Descriptive Statistics
+
+###### Registration State
+
+```{r }
+selected %>%  
+  filter(
+    State > 0
+  ) %>%
+  select(State) %>%
+  table()
+```
+
+###### Presidential Candidate
+
+```{r }
+selected %>%  
+  filter(
+    Pres_Vote > 0
+  ) %>%
+  select(Pres_Vote) %>%
+  table()
+```
+
+#### Continuous Variables
+
+| Variable Code (dta) | Variable Name (code book) | Range |
+|:--------------------|--------------------------:| -----:|
+|**V161086**|Feeling Thermometer: Democratic Presidential cand|0 - 100|
+|**V161087**|Feeling Thermometer: Republican Presidential cand|0 - 100|
+
+##### Descriptive statistics
+
+###### Feeling Thermometer: Democratic Presidential cand
+
+```{r }
+selected %>%  
+  filter(
+    Dem > 0
+  ) %>%
+  select(Dem) %>%
+  table()
+```
+
+###### Feeling Thermometer: Republican Presidential cand
+
+```{r }
+selected %>%  
+  filter(
+    Rep > 0
+  ) %>%
+  select(Rep) %>%
+  table()
+```

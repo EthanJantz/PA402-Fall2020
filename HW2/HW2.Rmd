@@ -3,11 +3,11 @@ title: "Assignment #2"
 author: "Ethan Jantz"
 date: "9/22/2020"
 output:
+  word_document:
+    toc: no
   html_document:
     toc: yes
     toc_float: yes
-  word_document:
-    toc: no
 always_allow_html: true
 ---
 
@@ -79,7 +79,9 @@ selected <-
 ```
 
 And just to check, the min for each variable should now be 0 or more 
-`r describe(selected)[c(3,8)] %>% paged_table()`
+```{r}
+describe(selected)[c(3,8)]
+```
 
 ### Variable Values
 
