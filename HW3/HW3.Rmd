@@ -38,15 +38,20 @@ Part B:
 ```{r setup, echo = TRUE, message = FALSE, warning = FALSE}
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE) # R Markdown options
 library(psych); library(ltm) # psych for describe(), ltm for cronbach.alpha()
-library(tidyverse)
+library(tidyverse); library(cowplot) # Cowplot for placing plots side by side
+library(urbnmapr) # For making the map that visualizes frequencies
 library(rmarkdown) # For accessing the functions used to display tables
 library(haven) # For reading ANES2016.dta file
 library(here) # For easier file referencing. See documentation at https://here.r-lib.org/
 
 anes <- haven::read_dta("ANES2016.dta") # Reading in the data
+ 
+states_sf <- get_urbn_map(map = "states", sf = TRUE) # Read in spatial data
 ```
 
-### Part A
+## Part A
+
+Here I am selecting the data for both part A and B from the ANES dataset. 
 
 ```{r select}
 selected <- 
@@ -55,22 +60,22 @@ selected <-
     "State" = V161015b,
     "Pres_Vote" = V161027,
     "Dem" = V161086,
-    "Rep" = V161086
+    "Rep" = V161087
     )
 ```
 
-In a previous version of this I filtered the data 
+In a previous version of this I filtered the data by cutting out non-responses from each question, but that narrowed the data down to a very small number. In this assignment I will only filter the data when a variable is being manipulated or analyzed to provide larger sample sizes. 
 
-#### Categorical Variables
+### Categorical Variables
 
 | Variable Code (dta) | Variable Name (code book) | Categories |
 |:--------------------|--------------------------:| ----------:|
 |**V161015b**| Registration state (all registrations)|  All 50 states + DC and PR|
 |**V161027**|  For whom did R vote for President| Hillary Clinton, Donald Trump, Gary Johnson, Jill Stein, Other |
 
-##### Descriptive Statistics
+#### Registration 
 
-###### Registration State
+For categorical variables we can visualize the descriptive statistics through bar plots. Because one of the variables is a spatial category we can also use mapping! This is a heat map of responses by state.
 
 ```{r }
 selected %>%  
@@ -78,10 +83,48 @@ selected %>%
     State > 0
   ) %>%
   select(State) %>%
-  table()
+  mutate(
+    State = gsub("[^0-9]","",as_factor(State)) %>%
+      ifelse(nchar(.) < 2, paste0("0", .), .)# gsub replaces characters, in this case I'm removing all of the non-digit characters in the labels (as_factor()) of the State variable.
+    # This leaves the numeric value of the state (look up "FIPS code" to understand why they go all the way to 56) to match with the states_sf object I created earlier.
+    # The ifelse statement adds a 0 to the value if it's a single digit number so I can match them down the line
+    # The periods are referencing the "State" variable, nchar() returns the length of a string
+    ) %>%
+  group_by(State) %>% # This is used to create summary tables in tidyverse
+  count() %>% # This is a type of summary table, the generic form is summarize()
+  left_join(states_sf, by = c("State" = "state_fips")) %>% # This joins the States to the states_sf table by the named columns
+  ggplot(aes(geometry = geometry)) +
+  geom_sf(aes(fill = n))
 ```
 
-###### Presidential Candidate
+And here is a bar plot with count labels to better display the frequencies. **The modal responding state was California with 357 responses.**
+
+```{r fig.height = 10} 
+# I set the fig.height in this chunk's header, that makes the ggplot itself larger when it's printed on the file
+# This makes it so the State axis text isn't so bunched up
+selected %>%  
+  filter(
+    State > 0
+  ) %>%
+  select(State) %>%
+  mutate(
+    State = gsub("[^0-9]","",as_factor(State)) %>%
+      ifelse(nchar(.) < 2, paste0("0", .), .)
+    ) %>%
+  group_by(State) %>% 
+  count() %>% 
+  left_join(states_sf, by = c("State" = "state_fips")) %>%
+  ggplot(aes(x = reorder(state_abbv, n), y = n)) +
+  geom_col() + 
+  geom_text(aes(label = n), hjust = -.2) +
+  scale_y_discrete(limits = c(0, 375), expand = c(0,0,0,20)) +
+  labs(x = "State", y = "Number of Responses", title = "Response Count to ANES 2016 Survey by State") +
+  coord_flip()
+```
+
+It would be interesting to do this in terms of responses per capita or something, but I'm not going to do that in this assignment. Two interesting things to note here are 1.) Puerto Rico was not included in this survey and 2.) DC had more responses than several states.
+
+#### Presidential Candidate
 
 ```{r }
 selected %>%  
@@ -89,36 +132,97 @@ selected %>%
     Pres_Vote > 0
   ) %>%
   select(Pres_Vote) %>%
-  table()
+  mutate(
+    Candidate = case_when(
+      . == 1 ~ "Hillary Clinton",
+      . == 2 ~ "Donald Trump",
+      . == 3 ~ "Gary Johnson",
+      . == 4 ~ "Jill Stein",
+      . == 5 ~ "Other"
+    )
+  ) %>% 
+  ggplot(aes(x = forcats::fct_infreq(Candidate))) +
+  geom_bar(stat = "count") + # fct_infreq reorders the bars highest-lowest count
+  stat_count(geom = "text", size = 3.5, aes(label = ..count..), vjust = -.5) +
+  labs(x = "Candidate", y = "Frequency", title = "Question: For whom did respondent vote for President")
 ```
 
-#### Continuous Variables
+I think that because this is a Pre-election survey, among other limitations, a very small number of respondents provided an answer to this question. But regardless, **the modal response was Hillary Clinton with 74 votes.**
+
+### Continuous Variables
 
 | Variable Code (dta) | Variable Name (code book) | Range |
 |:--------------------|--------------------------:| -----:|
-|**V161086**|Feeling Thermometer: Democratic Presidential cand|0 - 100|
-|**V161087**|Feeling Thermometer: Republican Presidential cand|0 - 100|
+|**V161086**|Feeling Thermometer: Democratic Presidential Candidate|0 - 100|
+|**V161087**|Feeling Thermometer: Republican Presidential Candidate|0 - 100|
 
-##### Descriptive statistics
-
-###### Feeling Thermometer: Democratic Presidential cand
+#### Feeling Thermometers
 
 ```{r }
-selected %>%  
+Dem <- selected %>%
   filter(
-    Dem > 0
+    Dem >= 0
   ) %>%
-  select(Dem) %>%
-  table()
+  select(Dem)
+
+Rep <- selected %>%
+  filter(
+    Rep >= 0
+  ) %>%
+  select(Rep)
 ```
 
-###### Feeling Thermometer: Republican Presidential cand
+With continuous data we have a couple of ways to visualize the descriptive statistics. YOu can use a histogram to see frequencies:
+
+```{r fig.width = 15, fig.height = 5}
+demHist <- ggplot(Dem) +
+  geom_histogram(aes(x = Dem), fill = "dodgerblue3", color = "black", bins = 15) +
+  labs(x = "Rating", y = "Frequency of Response", 
+       title = "Feeling Thermometer: Democratic Presidential Candidate",
+       subtitle = "Frequencies of Responses")
+
+repHist <- ggplot(Rep) +
+  geom_histogram(aes(x = Rep), fill = "#ff6666", color = "black", bins = 15) +
+  labs(x = "Rating", y = "", 
+       title = "Feeling Thermometer: Republican Presidential Candidate",
+       subtitle = "Frequencies of Responses")
+
+plot_grid(demHist, repHist)
+```
+Or you can use a boxplot to visualize the median, and quantiles. I've also added a dashed line to visualize the mean:
+
+```{r fig.width = 15, fig.height = 3}
+demBox <- ggplot(Dem) +
+  geom_boxplot(aes(x = Dem, y = ""), fill = "dodgerblue3", color = "black") +
+  geom_vline(xintercept = mean(unlist(Dem)), linetype = "dashed") + # You have to unlist the Dem object because of the way haven handles dta files
+  labs(x = "Rating", y = "",
+       title = "Feeling Thermometer: Democratic Presidential Candidate",
+       subtitle = "Frequencies of Responses")
+
+repBox <- ggplot(Rep) +
+  geom_boxplot(aes(x = Rep, y = ""), fill = "#ff6666", color = "black") +
+  geom_vline(xintercept = mean(unlist(Dem)), linetype = "dashed") + 
+  labs(x = "Rating", y = "",
+       title = "Feeling Thermometer: Republican Presidential Candidate",
+       subtitle = "Frequencies of Responses")
+
+plot_grid(demBox, repBox)
+```
+
+Of course, neither of these visualizations cover all of the descriptive statistics. So here is the table of selected descriptive stats:
 
 ```{r }
-selected %>%  
-  filter(
-    Rep > 0
-  ) %>%
-  select(Rep) %>%
-  table()
+demDesc <- describe(unlist(Dem)) %>%
+  select(n, mean, median, min, max, range, sd)
+
+repDesc <- describe(unlist(Rep)) %>%
+  select(n, mean, median, min, max, range, sd)
+
+Desc <- rbind(demDesc, repDesc)
+
+rownames(Desc) <- c("Dem", "Rep")
+
+paged_table(Desc)
 ```
+
+## Part B
