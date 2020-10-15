@@ -3,15 +3,17 @@ title: 'Assignment #3'
 author: "Ethan Jantz"
 date: "10/6/2020"
 output:
+  word_document:
+    toc: no
   html_document:
     toc: yes
     toc_float: yes
-  word_document:
-    toc: no
 always_allow_html: true
 ---
 
 This document is made using [R Markdown](https://rmarkdown.rstudio.com/), a great tool for sharing research in a way that is readable and easily reproducible. 
+
+## Assignment 3
 
 ***
 
@@ -101,7 +103,7 @@ And here is a bar plot with count labels to better display the frequencies. **Th
 
 ```{r fig.height = 10} 
 # I set the fig.height in this chunk's header, that makes the ggplot itself larger when it's printed on the file
-# This makes it so the State axis text isn't so bunched up
+# This makes it so the x axis labels aren't so bunched up
 selected %>%  
   filter(
     State > 0
@@ -141,8 +143,8 @@ selected %>%
       . == 5 ~ "Other"
     )
   ) %>% 
-  ggplot(aes(x = forcats::fct_infreq(Candidate))) +
-  geom_bar(stat = "count") + # fct_infreq reorders the bars highest-lowest count
+  ggplot(aes(x = forcats::fct_infreq(Candidate))) + # fct_infreq reorders the bars highest-lowest count
+  geom_bar(stat = "count") + 
   stat_count(geom = "text", size = 3.5, aes(label = ..count..), vjust = -.5) +
   labs(x = "Candidate", y = "Frequency", title = "Question: For whom did respondent vote for President")
 ```
@@ -172,7 +174,7 @@ Rep <- selected %>%
   select(Rep)
 ```
 
-With continuous data we have a couple of ways to visualize the descriptive statistics. YOu can use a histogram to see frequencies:
+With continuous data we have a couple of ways to visualize the descriptive statistics. You can use a histogram to see frequencies:
 
 ```{r fig.width = 15, fig.height = 5}
 demHist <- ggplot(Dem) +
@@ -189,7 +191,7 @@ repHist <- ggplot(Rep) +
 
 plot_grid(demHist, repHist)
 ```
-Or you can use a boxplot to visualize the median, and quantiles. I've also added a dashed line to visualize the mean:
+Or you can use a boxplot to visualize the median and quantiles. I've also added a dashed line to visualize the mean:
 
 ```{r fig.width = 15, fig.height = 3}
 demBox <- ggplot(Dem) +
@@ -201,7 +203,7 @@ demBox <- ggplot(Dem) +
 
 repBox <- ggplot(Rep) +
   geom_boxplot(aes(x = Rep, y = ""), fill = "#ff6666", color = "black") +
-  geom_vline(xintercept = mean(unlist(Dem)), linetype = "dashed") + 
+  geom_vline(xintercept = mean(unlist(Rep)), linetype = "dashed") + 
   labs(x = "Rating", y = "",
        title = "Feeling Thermometer: Republican Presidential Candidate",
        subtitle = "Frequencies of Responses")
@@ -226,3 +228,52 @@ paged_table(Desc)
 ```
 
 ## Part B
+
+### Categorical Variable
+
+I'm going to create a dichotomous variable that indicates whether the respondent voted for Donald Trump 
+
+```{r}
+Pres_Vote <- selected %>%  
+  filter(
+    Pres_Vote > 0
+  ) %>%
+  select(Pres_Vote) %>%
+  mutate(
+    Pres_Vote = ifelse(Pres_Vote == 2, 1, 0)
+  )
+```
+
+Then, I'm going to run a binomial test to see if the percentage of respondents that voted for Trump is significantly different from 50%
+
+```{r}
+binom.test(sum(Pres_Vote$Pres_Vote), dim(Pres_Vote)[1], alternative = "two.sided", p = .5)
+```
+
+It looks like it is not significantly different, with a p-value of 0.28. So what about 25%?
+
+```{r}
+binom.test(sum(Pres_Vote$Pres_Vote), dim(Pres_Vote)[1], alternative = "two.sided", p = .25)
+```
+
+This proportion **is** significantly different from 25%, with a p-value < .001.
+
+### Continuous Variable
+
+I'm going to select the Donald Trump Feeling Thermometer for this exercise. I'll transform the values to be between 0 and 1 by dividing them by 100, then I will test if the mean is significantly different from 0.
+
+```{r}
+Rep <- Rep / 100
+
+t.test(Rep, conf.level = .95)
+```
+
+With a p-value < .001 we can confidently say that the mean of the ratings of Donald Trump was significantly different from 0. Now let's perform the same test to see if the mean is significantly different from 1.
+
+```{r}
+Rep <- Rep / 100
+
+t.test(Rep, mu = 1, conf.level = .95)
+```
+
+And with another p-value < .001 we can confidently say that the mean of the ratings of Donald Trump was significantly different from 1.
