@@ -1,0 +1,186 @@
+---
+title: 'Assignment #4'
+author: "Ethan Jantz"
+date: "10/17/2020"
+output:
+  word_document:
+    toc: no
+  html_document:
+    toc: yes
+    toc_float: yes
+always_allow_html: true
+---
+
+This document is made using [R Markdown](https://rmarkdown.rstudio.com/), a great tool for sharing research in a way that is readable and reproducible. 
+
+## Assignment 4
+
+***
+
+Part A:
+
+    There are two questions in the dataset that ask about how people feel about the rich people (V162105) and big businesses (V162100). 
+    Recode both variables to eliminate missing values and recode to range from 0 to 1 where higher values indicate more positive sentiment. 
+    Conduct a paired samples t-test to assess whether people think more highly of rich people or big businesses.
+
+Part B:
+
+    Next, find a different continuous variable and test whether the mean value of the variable is different for democrats and republicans.  
+
+***
+
+```{r setup, echo = TRUE, message = FALSE, warning = FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE) # R Markdown options
+library(tidyverse); library(gridExtra) # For putting plots side-by-side, trying out a different package this time
+library(rmarkdown) # For accessing the functions used to display tables
+library(haven) # For reading ANES2016.dta file
+library(DescTools)  # For the LeveneTest() function
+
+anes <- haven::read_dta("ANES2016.dta") # Reading in the data
+```
+
+## Part A
+
+### Selecting Variables
+
+Let's subset the data. For part B I will be exploring the feeling thermometer on "Poor People" (V162099). 
+
+I'm interested this time to try and understand what the data looks like in terms of Pre- and Post- election survey results, so I've included every party registration variable in this selection.
+
+```{r select}
+selected <- anes %>%
+  select(
+    "Rich_People" = V162105,
+    "Big_Business" = V162100,
+    "Poor_People" = V162099,
+    "Party_Reg_Pre" = V161019,
+    "Party_Reg_Post" = V162026e,
+    "Party_Reg_PrePostSum" = V162030x
+  )
+
+selected %>% # Exploring the party registration responses 
+  select(Party_Reg_Pre:Party_Reg_PrePostSum) %>%
+  filter(
+    Party_Reg_Pre >= 0, Party_Reg_Pre <= 4,
+    Party_Reg_Post >= 0, Party_Reg_Post <= 4,
+    Party_Reg_PrePostSum >= 0
+  ) %>%
+  mutate(Pre_Post_Same = Party_Reg_Pre == Party_Reg_PrePostSum) %>%
+  paged_table()# This was done to check if there were any observations where the Pre and PrePostSum variables were different. There weren't, so I'll keep one of the three variables.
+
+selected <- selected %>% # Final dataframe selection, transforming variables
+  select(Rich_People:Party_Reg_Pre) %>% # Using the X:Y notation since I set the order above 
+  filter( # Removing 
+    Rich_People >= 0, Rich_People <= 100,
+    Big_Business >= 0, Big_Business <= 100,
+    Poor_People >= 0, Poor_People <= 100,
+    Party_Reg_Pre > 0, Party_Reg_Pre < 5 # 1 is Democratic party reg, 2 is Republican, 4 is None/Independent
+  ) %>%
+  mutate( # Transforming these variables to range from 0 to 1
+    Rich_People = Rich_People / 100, 
+    Big_Business = Big_Business / 100,
+    Poor_People = Poor_People / 100,
+    Party_Reg_Pre = factor(Party_Reg_Pre,
+                           levels = c(1, 2, 4),
+                           labels = c("Democrat", "Republican", "Ind/Other"))
+  )
+
+paged_table(selected)
+```
+
+Exploring the labels for the data shows that the Pre and PrePostSummary variables are different than the Post variable I chose. The Post variable is an indicator of whether they have a party registration in their state of registration. The PrePostSummary variable is the same as the Pre variable for every observation. I kept only the Pre-Election registration responses since I don't have a use for Post and PrePostSUm do not differ. Anyways, this is a tangent. Alongside registration information I filtered the Rich_People and Big_Business variables to only those that had a response that wasn't "I don't know." Though it would be interesting to explore how many respondents didn't have an opinion on these topics it isn't in the scope of this assignment. Maybe another day...
+
+### Distribution of the Continuous Variables
+
+First, let's take a look at the distributions of the two variables being analyzed here. Can we intuit the answer to this before performing the test?
+
+```{r dist-viz}
+rich_people <- selected %>%
+  ggplot() +
+  geom_histogram(aes(x = Rich_People),fill = "gold", bins = 20) +
+  ylim(0, 600) + 
+  annotate("text", x = .12, y = 600, label = "Rich People", fontface = 2) +
+  labs(x = "Rating", y = "Frequency", 
+       title = "How do the respondents rate ____?") +
+  theme_minimal() + 
+  theme(plot.title = element_text(face="bold"),
+        axis.title = element_text(face="bold")) # To bold the title and axis label
+
+big_business <- selected %>%
+  ggplot() + 
+  geom_histogram(aes(x = Big_Business), fill = "violet", bins = 20) +
+  ylim(0, 600) +
+  annotate("text", x = .15, y = 600, label = "Big Business", fontface = 2) +
+  labs(x = "Rating", y = "",
+       title = "") + 
+  theme_minimal() +
+  theme(axis.title = element_text(face="bold"))
+
+grid.arrange(rich_people, big_business, ncol = 2) # I set ylim above to make sure the viewer isn't confused by the automatic scaling
+```
+
+On a side note: I went back and forth on whether to visualize this using a histogram or a density plot. I decided on a histogram because it was able to better show the magnitude of differnce between response distributions. The density plot, especially when scaled to a max of 1, masked the fact that the response for sentiment on rich people had an extremely high frequency of responses around .5 compared to the response for sentiment on big business.
+
+I can't tell from looking whether the mean will be different between the two plots. It looks as if they both will have a mean around .5. Let's run the test and see if that's the case. I'll be performing a paired t-test in this instance, treating all respondents as part of one group. For part B we'll be performing an unpaired t-test by differentiating the responses by party registration.
+
+### Paired Samples T-Test
+
+First, let's just take a glance at the means for these variables. `r mean(selected$Rich_People)` is the mean response for the Rich_People variable, and `r mean(selected$Big_Business)` is the mean response for the Big_Business variable. That's a difference of `r mean(selected$Rich_People) - mean(selected$Big_Business)`, which seems significant. But let's run the test. The process will start with Levene's Test to check for equal variances between the variables. Then, we'll decide between using the t-test or Wilcox test. 
+
+```{r levene}
+LeveneTest(selected$Rich_People, selected$Big_Business, center = mean)
+```
+
+The difference in variance here is significant, so we'll be performing the Wilcox Test instead of a T-Test. 
+
+```{r wilcox}
+wilcox.test(selected$Rich_People, selected$Big_Business, alternative = "greater", paired = TRUE) # Is the sentiment for rich people greater than that of big business?
+```
+
+> **Answer: **
+> According to the results of these tests I can say that, with a p-value < .001, people think more highly of rich people than big business.
+
+## Part B
+
+Let's see if there is a difference in sentiment toward poor people between party registrations (or lackthereof). Before doing the analysis, let's take a look at the distributions like we did above.
+
+### Distribution of the Continuous Variable
+
+```{r dist-viz2}
+poor_people <- selected %>%
+  ggplot(aes(x = Poor_People,  y = Party_Reg_Pre, color = Party_Reg_Pre, fill = Party_Reg_Pre)) + 
+  geom_violin() +
+  stat_summary(fun.x = mean, geom = "point", size = 2, color = "black") +
+  scale_fill_manual(values = c("dodgerblue3", "#ff6666", "grey")) +
+  scale_color_manual(values = c("dodgerblue3", "#ff6666", "grey")) +
+  labs(x = "Rating", y = "Party Registration",
+       title = "How do the respondents rate Poor People?",
+       subtitle = "The black dot represents the mean") + 
+  theme_minimal() +
+  theme(axis.title = element_text(face="bold"),
+        legend.position = "none")
+
+poor_people
+```
+
+I chose a violin here instead of a histogram plot because using a histogram as I did earlier for 3 variables made it difficult to compare them. The violin provides a look at the distribution, and because I want to visualize the mean I think that it made sense to include a dot representing the mean instead of visualizing this data using a box plot. It looks here that there is a difference in mean between the Democrat-registered respondents and the other groups. The difference between Republicans and Indpendents/Others is less pronounced.
+
+### Independent T-Test
+
+Now let's remove Independents from the data and see if there's a difference between Democrats and Republicans with regards to their sentiment toward poor people. We'll start with a Levene's Test.
+
+```{r levene2}
+Dem_Rep <- selected %>%
+  filter(Party_Reg_Pre != "Ind/Other")
+
+LeveneTest(Poor_People ~ Party_Reg_Pre, data = Dem_Rep, center = mean) # Test for difference in variance
+```
+
+There is not a significant difference in variances between party registrations, which means we can use the default T-Test. 
+
+```{r t-test}
+t.test(Poor_People ~ Party_Reg_Pre, data = Dem_Rep, var.equal = TRUE)
+```
+
+> **Answer: **
+> Through this test we find that there is a significant difference between the means, with a p-value < .001. The mean rating for Democrat-registered respondents is 76.3 compared with Republican-registered respondents at 70.2. 
