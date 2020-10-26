@@ -1,0 +1,107 @@
+---
+title: 'Assignment #5'
+author: "Ethan Jantz"
+date: "10/17/2020"
+output:
+  word_document:
+    toc: no
+  html_document:
+    toc: yes
+    toc_float: yes
+always_allow_html: true
+---
+
+This document is made using [R Markdown](https://rmarkdown.rstudio.com/), a great tool for sharing research in a way that is readable and reproducible. 
+
+## Assignment 5
+
+***
+
+Part A: 
+
+    Using an ANOVA, test whether the mean sentiment towards rich people (V162105) and big businesses (V162100) differ as in Part A of Assignment 4.
+    
+    Next, test whether this difference separately for men and women. Describe whether the difference is the same or different for men and women.
+    
+Part B:  
+
+    Using the respondent's political party and the continuous dependent variable from Part B of Assignment #4, conduct an ANOVA to test whether democrats and republicans differ on the continuous variable
+    
+    Next, test whether the difference between republicans and democrats on this variable depends upon if they were voters or nonvoters.
+
+***
+
+```{r setup, echo = TRUE, message = FALSE, warning = FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE) # R Markdown options
+library(tidyverse); library(gridExtra) # For putting plots side-by-side, trying out a different package this time
+library(rmarkdown) # For accessing the functions used to display tables
+library(haven) # For reading ANES2016.dta file
+library(DescTools)  # For the LeveneTest() function
+
+anes <- haven::read_dta("ANES2016.dta") # Reading in the data
+```
+
+# Part A
+
+## Select and Recode Variables
+
+```{r select}
+selected <- anes %>%
+  select(
+    "Rich_People" = V162105,
+    "Big_Business" = V162100,
+    "Poor_People" = V162099,
+    "Party_Reg" = V161019,
+    "Voted" = V162031,
+    "Gender" = V161342
+  ) %>% 
+  filter(
+    Rich_People >= 0, Rich_People <= 100,
+    Big_Business >= 0, Big_Business <= 100,
+    Poor_People >= 0, Poor_People <= 100,
+    Party_Reg == 1 | Party_Reg == 2,
+    Voted >= 1, Voted <= 4,
+    Gender <= 2, Gender >= 1
+  ) %>%
+  mutate(
+    Rich_People = Rich_People/100,
+    Big_Business = Big_Business/100,
+    Poor_People = Poor_People/100,
+    Party_Reg = factor(Party_Reg, labels = c("Democrat", "Republican")),
+    Voted = ifelse(Voted == 4, 1, 0) %>% as.factor(),
+    Gender = factor(Gender, labels = c("Male", "Female"))
+  )
+
+paged_table(selected)
+```
+
+## Testing Differences in Mean Between Two Variables Using ANOVA
+
+```{r }
+sentiment_model <- aov(selected$Rich_People ~ selected$Big_Business)
+
+summary(sentiment_model)
+
+# For comparison
+wilcox.test(selected$Rich_People, selected$Big_Business, paired = TRUE)
+```
+
+The p-value for the ANOVA of the two variables and the Wilcoxon Test of the two variables is equal and significant (p < .001). This means that the means of the two variables, Rich_People (`r mean(selected$Rich_People)`) and Big_Business (`r mean(selected$Big_Business)`), are significantly different from each other. 
+
+## Testing Differences in Mean Sentiment by Gender
+
+```{r }
+rich_gender_model <- aov(selected$Rich_People ~ selected$Gender)
+
+business_gender_model <- aov(selected$Big_Business ~ selected$Gender)
+
+summary(rich_gender_model)
+
+summary(business_gender_model)
+```
+
+# Part B
+
+## Testing Differences in Mean Sentiment by Party
+
+## Testing Differences in Mean Sentiment by Party by Whether Respondent Voted
