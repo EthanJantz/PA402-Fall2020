@@ -36,7 +36,6 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE) # R Markdow
 library(tidyverse); library(gridExtra) # For putting plots side-by-side, trying out a different package this time
 library(rmarkdown) # For accessing the functions used to display tables
 library(haven) # For reading ANES2016.dta file
-library(DescTools)  # For the LeveneTest() function
 
 anes <- haven::read_dta("ANES2016.dta") # Reading in the data
 ```
@@ -100,8 +99,96 @@ summary(rich_gender_model)
 summary(business_gender_model)
 ```
 
+Based on the resulting p-values the average sentiment between Male and Female respondents toward Rich People (p = .355) was not significantly different, but the difference was significant in sentiment toward Big Business (p < .001). We can visualize this:
+
+```{r }
+rich_plot <- selected %>%
+  ggplot(aes(x = Rich_People,  y = Gender, color = Gender, fill = Gender)) + 
+  geom_violin() +
+  stat_summary(fun.x = mean, geom = "point", size = 2, color = "black") +
+  scale_fill_manual(values = c("dodgerblue3", "pink")) +
+  scale_color_manual(values = c("dodgerblue3", "pink")) +
+  annotate("text", x = .15, y = 2.5, label = "Rich People", fontface = 2) +
+  labs(x = "Rating", y = "Gender",
+       title = "How do the respondents rate ______?",
+       subtitle = "The black dot represents the mean") + 
+  theme_minimal() +
+  theme(axis.title = element_text(face="bold"),
+        legend.position = "none")
+
+business_plot <- selected %>%
+  ggplot(aes(x = Big_Business,  y = Gender, color = Gender, fill = Gender)) + 
+  geom_violin() +
+  stat_summary(fun.x = mean, geom = "point", size = 2, color = "black") +
+  scale_fill_manual(values = c("dodgerblue3", "pink")) +
+  scale_color_manual(values = c("dodgerblue3", "pink")) +
+  annotate("text", x = .15, y = 2.5, label = "Big Business", fontface = 2) +
+  labs(x = "Rating", y = "", 
+       title = "",
+       subtitle = "") + 
+  theme_minimal() +
+  theme(axis.title = element_text(face="bold"), axis.text.y = element_blank(),
+        legend.position = "none")
+
+grid.arrange(rich_plot, business_plot, ncol = 2)
+```
+
+Here we can see that the means for Rich People between genders is close, and only slightly less so on the means for Big Business. Maybe a table will be more illustrative:
+
+```{r }
+selected %>% 
+  select(Gender, Big_Business, Rich_People) %>%
+  group_by(Gender) %>%
+  summarize(Rich_People = mean(Rich_People),
+            Big_Business = mean(Big_Business)
+            ) %>%
+  paged_table()
+```
+
+Here we can see that there is a very small difference between genders in their sentiment toward Rich People (~.01) and a larger difference in their sentiment toward Big Business (~.05). Not a huge difference in either case, but we can see why the difference in Big_Business sentiment was significant. 
+
 # Part B
 
 ## Testing Differences in Mean Sentiment by Party
 
+```{r }
+LeveneTest(selected$Poor_People ~ selected$Party_Reg, center = "mean")
+LeveneTest(selected$Poor_People ~ selected$Voted, center = "mean")
+```
+Here we can see that there is not a significant difference in variance between Party Registration or Voter/Non-Voter groups when comparing sentiment toward Poor People. Let's take a look at what this data looks like on a graph. We explored this relationship using vioin graphs in the last assignment. Let's take a look at them using box plots this time around. 
+
+```{r }
+poor_people_byparty <- selected %>%
+  select(Party_Reg, Poor_People) %>%
+  ggplot(aes(y = Poor_People, fill = Party_Reg)) + 
+  geom_boxplot() + 
+  scale_fill_manual(values = c("dodgerblue3", "#ff6666")) + 
+  theme(axis.text.x = element_blank()) + 
+  labs(y = "Sentiment", fill = "Party Registration",
+       title = "How does the respondent rate Poor People?") +
+  theme_minimal() +
+  coord_flip()
+
+poor_people_byparty
+```
+
+Here we can tell visually that both groups here have different mean responses, but the tails and boxes look proportionally similar. This backs up the findings of Levene's Test. Next we can run a one-way ANOVA test
+
+```{r }
+poor_party_model <- aov(selected$Poor_People ~ selected$Party_Reg)
+
+summary(poor_party_model)
+```
+
+
+
 ## Testing Differences in Mean Sentiment by Party by Whether Respondent Voted
+
+```{r }
+```
+
+```{r }
+poor_party_twoway_model <- aov(selected$Poor_People ~ selected$Party_Reg * selected$Voted)
+
+summary(poor_party_twoway_model)
+```
