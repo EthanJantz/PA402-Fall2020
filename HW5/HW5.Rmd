@@ -5,10 +5,12 @@ date: "10/17/2020"
 output:
   word_document:
     toc: no
+  pdf_document:
+    toc: no
   html_document:
     toc: yes
     toc_float: yes
-always_allow_html: true
+always_allow_html: yes
 ---
 
 This document is made using [R Markdown](https://rmarkdown.rstudio.com/), a great tool for sharing research in a way that is readable and reproducible. 
@@ -36,6 +38,8 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE) # R Markdow
 library(tidyverse); library(gridExtra) # For putting plots side-by-side, trying out a different package this time
 library(rmarkdown) # For accessing the functions used to display tables
 library(haven) # For reading ANES2016.dta file
+library(DescTools) # For LeveneTest()
+library(rstatix) # For tukey_hsd()
 
 anes <- haven::read_dta("ANES2016.dta") # Reading in the data
 ```
@@ -84,7 +88,7 @@ summary(sentiment_model)
 # For comparison
 wilcox.test(selected$Rich_People, selected$Big_Business, paired = TRUE)
 ```
-
+> **Answer** 
 The p-value for the ANOVA of the two variables and the Wilcoxon Test of the two variables is equal and significant (p < .001). This means that the means of the two variables, Rich_People (`r mean(selected$Rich_People)`) and Big_Business (`r mean(selected$Big_Business)`), are significantly different from each other. 
 
 ## Testing Differences in Mean Sentiment by Gender
@@ -99,7 +103,8 @@ summary(rich_gender_model)
 summary(business_gender_model)
 ```
 
-Based on the resulting p-values the average sentiment between Male and Female respondents toward Rich People (p = .355) was not significantly different, but the difference was significant in sentiment toward Big Business (p < .001). We can visualize this:
+> **Answer**
+Based on the resulting p-values, the average sentiment between Male and Female respondents toward Rich People (p = .355) was not significantly different, but the difference was significant in sentiment toward Big Business (p < .001). Let's try visualizing this:
 
 ```{r }
 rich_plot <- selected %>%
@@ -145,17 +150,20 @@ selected %>%
   paged_table()
 ```
 
-Here we can see that there is a very small difference between genders in their sentiment toward Rich People (~.01) and a larger difference in their sentiment toward Big Business (~.05). Not a huge difference in either case, but we can see why the difference in Big_Business sentiment was significant. 
+Here we can see that there is a very small difference between genders in their mean sentiment toward Rich People (~.01) and a larger difference in their mean sentiment toward Big Business (~.05). Not a huge difference in either case, but we can see why the difference in Big_Business sentiment was significant.
 
 # Part B
 
 ## Testing Differences in Mean Sentiment by Party
 
+We'll be testing the difference in sentiment toward Poor People as done in the previous assignment.
+
 ```{r }
 LeveneTest(selected$Poor_People ~ selected$Party_Reg, center = "mean")
 LeveneTest(selected$Poor_People ~ selected$Voted, center = "mean")
 ```
-Here we can see that there is not a significant difference in variance between Party Registration or Voter/Non-Voter groups when comparing sentiment toward Poor People. Let's take a look at what this data looks like on a graph. We explored this relationship using vioin graphs in the last assignment. Let's take a look at them using box plots this time around. 
+
+There is not a significant difference in means between Party Registration or Voter/Non-Voter groups when comparing sentiment toward Poor People. Let's take a look at what this data looks like on a graph. We explored this relationship using violin graphs in the last assignment. Let's take a look at the shape of the data using box plots this time around. 
 
 ```{r }
 poor_people_byparty <- selected %>%
@@ -166,29 +174,52 @@ poor_people_byparty <- selected %>%
   theme(axis.text.x = element_blank()) + 
   labs(y = "Sentiment", fill = "Party Registration",
        title = "How does the respondent rate Poor People?") +
-  theme_minimal() +
-  coord_flip()
+  theme_minimal() 
 
 poor_people_byparty
 ```
 
-Here we can tell visually that both groups here have different mean responses, but the tails and boxes look proportionally similar. This backs up the findings of Levene's Test. Next we can run a one-way ANOVA test
+The medians for these box plots look different, and so do the proportions of their quartiles. Let's run an ANOVA test.
 
 ```{r }
 poor_party_model <- aov(selected$Poor_People ~ selected$Party_Reg)
 
 summary(poor_party_model)
 ```
+> **Answer**
+There is a significant difference in average sentiment toward Poor People based on party registration (p < .001) according to these results. 
 
+## Testing Party Differences in Mean Sentiment by Whether Respondent Voted
 
-
-## Testing Differences in Mean Sentiment by Party by Whether Respondent Voted
+We want to test if grouping respondents by voter/non-voter has a significant effect on the difference in party sentiment toward Poor People. We can start by visualizing the differences. I'll use box plots.
 
 ```{r }
+ANOVA_plot <- selected %>%
+  select(Poor_People, Party_Reg, Voted) %>%
+  ggplot(aes(y = Poor_People, x = Voted, color = Party_Reg)) +
+  geom_boxplot() +
+  scale_color_manual(values = c("dodgerblue3", "#ff6666")) +
+  scale_x_discrete(labels = c("0" = "Did Not Vote", "1" = "Voted")) +
+  labs(y = "Sentiment", color = "Party Registration",
+       title = "How does the respondent rate Poor People?")
+  
+  
+ANOVA_plot
 ```
+
+Here we can see an interesting difference between voting/non-voting groups between parties. It seems that Non-voting Democrats have a wider sentiment than voters from the same party, and vice versa for Republicans. Let's test and see if there is a significant difference in the means.
 
 ```{r }
 poor_party_twoway_model <- aov(selected$Poor_People ~ selected$Party_Reg * selected$Voted)
 
 summary(poor_party_twoway_model)
 ```
+
+The significant difference in party registration is still present, but there doesn't seem to be significant difference between parties when grouped by whether or not the respondent voted. We can further analyze this with a Tukey HSD test.
+
+```{r }
+poor_model_tukey <- tukey_hsd(poor_party_twoway_model)
+poor_model_tukey
+```
+> **Answer**
+There is a significant difference between non-voting Republicans and voting Democrats as well as voting Republicans and Democrats. Other pairings were not significantly different. From this we can conclude that whether or not a respondent voted did not significantly affect the difference in sentiment between Democrats and Republicans toward Poor People.
