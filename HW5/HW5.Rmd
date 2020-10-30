@@ -219,7 +219,16 @@ The significant difference in party registration is still present, but there doe
 
 ```{r }
 poor_model_tukey <- tukey_hsd(poor_party_twoway_model)
-poor_model_tukey
+poor_model_tukey # Evgenia recommended rstatix::emmeans_test()
 ```
+
+```{r }
+selected %>%
+  group_by(Voted) %>%
+  emmeans_test(Poor_People ~ Party_Reg, p.adjust.method = "bonferroni") 
+```
+
+The Estimated Marginal Means test backs up the results of the Tukey HSD test, showing that there is not a significant interaction between Voting/Non-voting groups and Party Registration on the respondent's sentiment toward Poor People.
+
 > **Answer**
-There is a significant difference between non-voting Republicans and voting Democrats as well as voting Republicans and Democrats. Other pairings were not significantly different. From this we can conclude that whether or not a respondent voted did not significantly affect the difference in sentiment between Democrats and Republicans toward Poor People.
+There is a significant difference between non-voting Republicans and voting Democrats as well as voting Republicans and Democrats according to the Tukey HSD results. Other pairings were not significantly different. From this we can conclude that whether or not a respondent voted did not significantly affect the difference in sentiment between Democrats and Republicans toward Poor People. In otherwords, whether or not a respondent voted does not have a significant interaction effect with their sentiment toward poor people. There are limitations to this report, mainly that I did not code for Independent/Other registered parties amont respondents. Respondents that register Democrat/Republican are more likely to vote than registered Independents, and this bias may have affected the results of my tests. 

@@ -3016,7 +3016,7 @@ summary(poor_party_twoway_model)</code></pre>
 ## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</code></pre>
 <p>The significant difference in party registration is still present, but there doesn’t seem to be significant difference between parties when grouped by whether or not the respondent voted. We can further analyze this with a Tukey HSD test.</p>
 <pre class="r"><code>poor_model_tukey &lt;- tukey_hsd(poor_party_twoway_model)
-poor_model_tukey</code></pre>
+poor_model_tukey # Evgenia recommended rstatix::emmeans_test()</code></pre>
 <pre><code>## # A tibble: 8 x 9
 ##   term  group1 group2 null.value estimate conf.low conf.high   p.adj
 ## * &lt;chr&gt; &lt;chr&gt;  &lt;chr&gt;       &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt;     &lt;dbl&gt;   &lt;dbl&gt;
@@ -3029,8 +3029,17 @@ poor_model_tukey</code></pre>
 ## 7 sele~ Repub~ Repub~          0   0.0169  -0.0510    0.0848 9.19e-1
 ## 8 sele~ Democ~ Repub~          0  -0.0636  -0.0928   -0.0344 1.55e-7
 ## # ... with 1 more variable: p.adj.signif &lt;chr&gt;</code></pre>
+<pre class="r"><code>selected %&gt;%
+  group_by(Voted) %&gt;%
+  emmeans_test(Poor_People ~ Party_Reg, p.adjust.method = &quot;bonferroni&quot;) </code></pre>
+<pre><code>## # A tibble: 2 x 10
+##   Voted term   .y.    group1 group2    df statistic       p   p.adj p.adj.signif
+## * &lt;chr&gt; &lt;chr&gt;  &lt;chr&gt;  &lt;chr&gt;  &lt;chr&gt;  &lt;dbl&gt;     &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt; &lt;chr&gt;       
+## 1 0     Party~ Poor_~ Democ~ Repub~  1227      1.80 7.25e-2 7.25e-2 ns          
+## 2 1     Party~ Poor_~ Democ~ Repub~  1227      5.60 2.59e-8 2.59e-8 ****</code></pre>
+<p>The Estimated Marginal Means test backs up the results of the Tukey HSD test, showing that there is not a significant interaction between Voting/Non-voting groups and Party Registration on the respondent’s sentiment toward Poor People.</p>
 <blockquote>
-<p><strong>Answer</strong> There is a significant difference between non-voting Republicans and voting Democrats as well as voting Republicans and Democrats. Other pairings were not significantly different. From this we can conclude that whether or not a respondent voted did not significantly affect the difference in sentiment between Democrats and Republicans toward Poor People.</p>
+<p><strong>Answer</strong> There is a significant difference between non-voting Republicans and voting Democrats as well as voting Republicans and Democrats according to the Tukey HSD results. Other pairings were not significantly different. From this we can conclude that whether or not a respondent voted did not significantly affect the difference in sentiment between Democrats and Republicans toward Poor People. In otherwords, whether or not a respondent voted does not have a significant interaction effect with their sentiment toward poor people. There are limitations to this report, mainly that I did not code for Independent/Other registered parties amont respondents. Respondents that register Democrat/Republican are more likely to vote than registered Independents, and this bias may have affected the results of my tests.</p>
 </blockquote>
 </div>
 </div>
