@@ -1,0 +1,107 @@
+---
+title: 'Assignment #5'
+author: "Ethan Jantz"
+date: "11/6/2020"
+output:
+  word_document:
+    toc: no
+  pdf_document:
+    toc: no
+  html_document:
+    toc: yes
+    toc_float: yes
+always_allow_html: yes
+---
+
+This document is made using [R Markdown](https://rmarkdown.rstudio.com/), a great tool for sharing research in a way that is readable and reproducible. 
+
+## Assignment 6
+
+***
+
+Using chi squared tests, answer the following two questions: 
+
+    1. Do men and women differ in their highest level of education (V161270)? 
+        Recategorize education into 4 categories: Less than a High School Degree, High school or High school Equivalent, Some College/Associates Degree, and 4 Year Degree and Higher.
+        
+    2. Does the proportion of people who support the 2010 health care law (V161113) vary depending on their religion (V161265x)?
+        For the sake of this statistical test, combine the three Protestant groups into one category and combine Jewish and "Other Religion" into one category.
+        Your categories should then be Protestants, Catholics, Undifferentiated Christian, Other Religion, and Not Religious. 
+
+Explain in full sentences what you are doing and why you are doing it. Interpret the results. Do not only paste R output into the document but instead include it with your description of what the output means. 
+
+***
+
+```{r setup, echo = TRUE, message = FALSE, warning = FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE) # R Markdown options
+library(tidyverse); library(gridExtra) # For putting plots side-by-side, trying out a different package this time
+library(rmarkdown) # For accessing the functions used to display tables
+library(haven) # For reading ANES2016.dta file
+
+anes <- haven::read_dta("ANES2016.dta") # Reading in the data
+```
+
+# Part A
+
+## Select and Recode Variables
+
+First, I'll be selecting and recoding the variables. The select function selects and renames the variables, the filter function removes observations that have inapplicable responses, the mutate function recodes variables. In this case every variable selected is turned into a factor. 
+ 
+```{r select}
+selected <- anes %>%
+  select(
+    "Gender" = V161342,
+    "Education" = V161270,
+    "Health_Law_Support" = V161113,
+    "Religion" = V161265x
+  ) %>%
+  filter(
+    Gender %in% c(1,2),
+    Education %in% c(1:90), # 5 respondents responded "other" and then specified "High School Graduate" and that is coded as 90
+    Health_Law_Support %in% c(1:3),
+    Religion %in% c(1:8)
+  ) %>%
+  mutate(
+    Gender = factor(Gender, labels = c("Male", "Female")),
+    Education = case_when(
+      Education %in% c(1:8) ~ 1, # no high school
+      Education %in% c(9,90) ~ 2, # high school or equivalent
+      Education %in% c(10:12) ~ 3, # some college or associates degree
+      Education %in% c(13:16) ~ 4, # college degree or higher
+    ) %>% 
+      factor(labels = c("Less than a High School Degree", "High School Degree or GED", "Some College/Associates Degree", "4 Year Degree and Higher")),
+    
+    Health_Law_Support = factor(Health_Law_Support, labels = c("Favor", "Oppose", "Neither favor nor oppose")),
+    
+    Religion = factor(Religion) %>%
+      fct_collapse(
+        Protestant = c("1", "2", "3"),
+        Catholic = "4",
+        "Undifferentiated Christian" = "5", 
+        Other = c("6", "7"),
+        "Not Religious" = "8"
+      )
+  )
+```
+
+## Comparing Education Attainment by Gender
+
+```{r }
+Education_Gender <- chisq.test(selected$Education, selected$Gender)
+
+Education_Gender
+```
+
+# Part B
+
+## Comparing Support for Health Care Law and Religious Affiliation
+
+Here is the text detailing the meaning of the health care law question: 
+
+    Do you favor, oppose, or neither favor nor oppose the health care reform law passed in 2010? This law requires all Americans to buy health insurance and requires health insurance companies to accept everyone.
+    
+```{r }
+HealthLawSupport_Religion <- chisq.test(selected$Health_Law_Support, selected$Religion)
+
+HealthLawSupport_Religion
+```
