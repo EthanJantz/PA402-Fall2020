@@ -3,13 +3,13 @@ title: 'Assignment #6'
 author: "Ethan Jantz"
 date: "11/6/2020"
 output:
-  word_document:
-    toc: no
-  pdf_document:
-    toc: no
   html_document:
     toc: yes
     toc_float: yes
+  pdf_document:
+    toc: no
+  word_document:
+    toc: no
 always_allow_html: yes
 ---
 
@@ -37,7 +37,8 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE) # R Markdow
 library(tidyverse); library(gridExtra) # For putting plots side-by-side, trying out a different package this time
 library(rmarkdown) # For accessing the functions used to display tables
 library(haven) # For reading ANES2016.dta file
-library(descr) 
+library(descr) # For CrossTable()
+library(DescTools) # For CramerV()
 
 anes <- haven::read_dta("ANES2016.dta") # Reading in the data
 ```
@@ -70,10 +71,9 @@ selected <- anes %>%
       Education %in% c(10:12) ~ 3, # some college or associates degree
       Education %in% c(13:16) ~ 4, # college degree or higher
     ) %>% 
-      factor(labels = c("Less than a High School Degree", "High School Degree or GED", "Some College/Associates Degree", "4 Year Degree and Higher")),
-    
+      factor(labels = c("Less than a High School Degree", "High School Degree or GED",
+                        "Some College/Associates Degree", "4 Year Degree and Higher")),
     Health_Law_Support = factor(Health_Law_Support, labels = c("Favor", "Oppose", "Neither favor nor oppose")),
-    
     Religion = factor(Religion) %>%
       fct_collapse(
         Protestant = c("1", "2", "3"),
@@ -107,18 +107,49 @@ CramerV(selected$Education, selected$Gender)
 > **Answer**
 The p-value for both chi-squared tests was the same (.0225) and significant (< .05), so we can say that there is an association. The result of Cramer's V test shows that this association is weak (.048).
 
-Given the total distribution of gender in the sample (male = .47, female = .52) we can see that female-identifying respondents are only slightly more likely to have higher educational attainment than male-identifying respondents. The largest difference between the two being in the Some college/Associates Degree category.
+Given the total distribution of gender in the sample (male = .47, female = .52) we can see that female-identifying respondents are only slightly more likely to have higher educational attainment than male-identifying respondents. The largest difference between the two being in the Some college/Associates Degree category. This can be seen by using a bar chart. 
+
+```{r }
+selected %>%
+  ggplot(aes(x = Education, fill = Gender)) + 
+  geom_bar(position = "dodge") +
+  labs(y = "", title = "Educational Attainment by Gender") +
+  scale_fill_manual(values = c("dodgerblue3", "pink")) +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 15)) # Tidies up the x-axis labels so they don't overlap 
+```
 
 # Part B
 
-## Comparing Support for Health Care Law and Religious Affiliation
+## Comparing Support for Health Care Law by Religious Affiliation
 
 Here is the text detailing the meaning of the health care law question: 
 
     Do you favor, oppose, or neither favor nor oppose the health care reform law passed in 2010? This law requires all Americans to buy health insurance and requires health insurance companies to accept everyone.
     
+I'll be running the chi-squared test of independence between the respondent's support for health care law and their religious affiliation.
+    
 ```{r }
-HealthLawSupport_Religion <- CrossTable(anesselected$Health_Law_Support, selected$Religion)
+HealthLawSupport_Religion <- chisq.test(selected$Health_Law_Support, selected$Religion)
 
 HealthLawSupport_Religion
 ```
+
+Here we can see that there is an association. Let's visualize the data and see what that shows before we move into testing with Cramer's V, which I selected because I am looking at two categorical variables, one of which is ordinal and the other nominal. 
+
+```{r }
+selected %>%
+  ggplot(aes(x = Health_Law_Support, fill = Religion)) +
+  geom_bar(position = "dodge") +
+  labs(x = "Opinion on Health Care Law", y = "", title = "Support for 2010 Health Care Law by Religious Affiliation")
+```
+
+This is a very busy graph, but it looks like there is some association in multiple categories. Protestant certainly sticks out. Let's see what the strength of this association is. 
+
+```{r }
+CramerV(selected$Health_Law_Support, selected$Religion)
+```
+
+> **Answer**
+The result of the chi-squared test (p < .001) implies an association between respondents' religion and their opinion on the 2010 health care law. Cramer's V test (.09) reports that that association is weak.
+
+It would be interesting to see how the Protestant response breaks down among its sub-categories. 
