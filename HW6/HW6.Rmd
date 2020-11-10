@@ -1,5 +1,5 @@
 ---
-title: 'Assignment #5'
+title: 'Assignment #6'
 author: "Ethan Jantz"
 date: "11/6/2020"
 output:
@@ -37,6 +37,7 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE) # R Markdow
 library(tidyverse); library(gridExtra) # For putting plots side-by-side, trying out a different package this time
 library(rmarkdown) # For accessing the functions used to display tables
 library(haven) # For reading ANES2016.dta file
+library(descr) 
 
 anes <- haven::read_dta("ANES2016.dta") # Reading in the data
 ```
@@ -86,11 +87,27 @@ selected <- anes %>%
 
 ## Comparing Education Attainment by Gender
 
-```{r }
-Education_Gender <- chisq.test(selected$Education, selected$Gender)
+Here I'm running both the CrossTable (part of the *descr* library) and chisq.test (part of base R). I'm passing **chisq = TRUE** to CrossTable() to compare the results to the base R chisq.test function. The results of this test will tell me if there is an association between educational attainment and gender within the sample population.
 
-Education_Gender
+```{r }
+Education_Gender_CTable <- CrossTable(selected$Education, selected$Gender, prop.c = TRUE, prop.r = TRUE,
+                               chisq = TRUE, total.r = TRUE, total.c = TRUE, expected = TRUE)
+Education_Gender_chisq.test <- chisq.test(selected$Education, selected$Gender)
+
+Education_Gender_CTable
+Education_Gender_chisq.test
 ```
+
+We can see that the results of the tests between the functions are the same. The benefit to running CrossTable is its built-in description of the data. This is powerful, since I can see that there's likely a weak association between gender and educational attainment and not a strong one, but I still need to run another test to say so confidently. I'm using Cramer's V test because both variables are categorical/nominal and differ in the number of categories. 
+
+```{r }
+CramerV(selected$Education, selected$Gender)
+```
+
+> **Answer**
+The p-value for both chi-squared tests was the same (.0225) and significant (< .05), so we can say that there is an association. The result of Cramer's V test shows that this association is weak (.048).
+
+Given the total distribution of gender in the sample (male = .47, female = .52) we can see that female-identifying respondents are only slightly more likely to have higher educational attainment than male-identifying respondents. The largest difference between the two being in the Some college/Associates Degree category.
 
 # Part B
 
@@ -101,7 +118,7 @@ Here is the text detailing the meaning of the health care law question:
     Do you favor, oppose, or neither favor nor oppose the health care reform law passed in 2010? This law requires all Americans to buy health insurance and requires health insurance companies to accept everyone.
     
 ```{r }
-HealthLawSupport_Religion <- chisq.test(selected$Health_Law_Support, selected$Religion)
+HealthLawSupport_Religion <- CrossTable(anesselected$Health_Law_Support, selected$Religion)
 
 HealthLawSupport_Religion
 ```
