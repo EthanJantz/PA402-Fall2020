@@ -3,13 +3,13 @@ title: 'Assignment #6'
 author: "Ethan Jantz"
 date: "11/6/2020"
 output:
+  word_document:
+    toc: no
+  pdf_document:
+    toc: no
   html_document:
     toc: yes
     toc_float: yes
-  pdf_document:
-    toc: no
-  word_document:
-    toc: no
 always_allow_html: yes
 ---
 
@@ -150,6 +150,6 @@ CramerV(selected$Health_Law_Support, selected$Religion)
 ```
 
 > **Answer**
-The result of the chi-squared test (p < .001) implies an association between respondents' religion and their opinion on the 2010 health care law. Cramer's V test (.09) reports that that association is weak.
+The result of the chi-squared test (p < .001) shows an association between respondents' religion and their opinion on the 2010 health care law. Cramer's V test (.09) reports that that association is weak.
 
 It would be interesting to see how the Protestant response breaks down among its sub-categories. 
