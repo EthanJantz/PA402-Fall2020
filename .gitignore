@@ -4,5 +4,5 @@
 *.Rhistory
 *.docx
 *.pdf
-/Final
+/Final/*
 .Rproj.user
