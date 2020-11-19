@@ -1,0 +1,63 @@
+---
+title: "Property Ownership Analysis"
+author: "Ethan Jantz"
+date: "11/19/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(sf); library(geojsonsf)
+library(here)
+library(classInt)
+
+setwd(here::here())
+
+properties <- read_csv("Nov9_FML_OwnOccUpdated.csv")
+gentrification <- read_csv("Gentrification_1990-2017.csv")
+tracts <- geojson_sf("tracts.geojson")
+community_areas <- geojson_sf("community_areas.geojson")
+evictions_commarea <- read_csv("eviction_data_comm_area.csv")
+```
+
+```{r spatial joins}
+properties_sf <- st_as_sf(properties, coords = c("Long", "Lat"),
+                          crs = 26971, agr = "constant") # Converts the df to an sf for spatial analysis
+```
+
+```{r property ownership}
+property_owners <- properties %>%
+  group_by(Taxpayer.Match.Code) %>%
+  summarize(
+    properties = n_distinct(Property.Index.Number),
+    property_cat = case_when(
+      properties == 1 ~ "1",
+      properties >= 2 & properties <= 5 ~ "2 - 5",
+      properties >= 6 & properties <= 15 ~ "6 - 15",
+      TRUE ~ ">15"
+    ) %>% factor(),
+    units_estimate = sum(Relative.Size),
+    units_cat = case_when(
+      units_estimate == 1 ~ "1",
+      units_estimate >= 2 & units_estimate <= 4 ~ "2 - 4",
+      units_estimate >= 5 & units_estimate <= 12 ~ "5 - 12",
+      units_estimate >= 12 & units_estimate <= 30 ~ "12 - 30",
+      units_estimate >= 30 & units_estimate <= 99 ~ "30 - 99",
+      units_estimate >= 100 ~ ">100"
+    ) %>% factor(),
+    affiliated_owner = Affiliated.With
+    ) %>%
+  unique()
+
+summary(property_owners)
+
+properties_sf <- property_owners %>%
+  select(Taxpayer.Match.Code, 
+         "Properties_Owned" = properties,
+         "Properties_Owned_Cat" = property_cat,
+         "Units_Owned_Estimate" = units_estimate,
+         "Units_Owned_Cat" = units_cat) %>%
+  right_join(properties_sf, by = "Taxpayer.Match.Code")
+```
+

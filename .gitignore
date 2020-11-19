@@ -1,8 +1,8 @@
 *.Rproj
 *.pdf
 \.Rproj.user
+\data
 *.Rhistory
 *.docx
 *.pdf
-/Final/*
 .Rproj.user
