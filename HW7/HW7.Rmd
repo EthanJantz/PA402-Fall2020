@@ -1,0 +1,185 @@
+---
+title: 'Assignment #7'
+author: "Ethan Jantz"
+date: "11/20/2020"
+output:
+  html_document:
+    toc: yes
+    toc_float: yes
+  pdf_document:
+    toc: no
+  word_document:
+    toc: no
+always_allow_html: yes
+---
+
+This document is made using [R Markdown](https://rmarkdown.rstudio.com/), a great tool for sharing research in a way that is readable and reproducible. 
+
+# Assignment 7
+
+***
+
+ Develop two hypotheses about relationships among continuous variables. 
+ 
+ Test each one using correlations. Test each one using bivariate regression. 
+ 
+ Pick one of the relationships. 
+ 
+ Choose 2 control variables and run a multivariate regression model testing the relationship including the control variables as predictors. 
+ 
+ Describe any transformations of variables, incorporate R syntax into your document as you explain what you did and why you did it, and interpret the results.  
+
+
+***
+
+```{r setup, echo = TRUE, message = FALSE, warning = FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE) # R Markdown options
+library(tidyverse)
+library(tidymodels) # For building models using tidy methods
+library(rmarkdown) # For accessing the functions used to display tables
+library(haven) # For reading ANES2016.dta file
+
+anes <- haven::read_dta("ANES2016.dta") %>% # Reading in the data
+  zap_labels()
+
+lm_mod <- linear_reg() %>% # Setting the type of model I want to use
+  set_engine("lm")
+```
+
+Note: Haven includes information that we don't need in this analysis and that interferes with tidymodels packages. Because of this I ran the `zap_labels()` function to remove the problematic parts of the data. 
+
+Note 2: Creating `lm_mod` in advance allows me to not repeat code that I will be using between the three regressions. The `lm_mod` object is an empty model object that I can fit data into. 
+
+# Hypotheses
+
+**Hypothesis 1**: Respondents who feel warmer about Bill Clinton (**V161093**) will also have warmer feelings about Hillary Clinton's candidacy (**V161086**). 
+
+**Hypothesis 2**: Respondents who have lived longer in their community (**V161331a**) have a higher income (**V161361x**)
+
+**Control Variables**: The party with which the respondent is registered (**V161019**) and their gender (**V161342**)
+
+I'll select the variables from the full ANES dataset, filter out NA and inapplicable values, and convert the categorical variables to labeled factors.
+
+```{r select}
+selected <- anes %>%
+  select(
+    # Testing Variables
+    Bill = V161093,
+    Hillary = V161086,
+    Community_Years = V161331x,
+    Income = V161361x,
+    # Control Variables
+    Gender = V161342,
+    Party_Reg = V161019
+  ) %>%
+  filter(
+    Bill %in% c(0:100),
+    Hillary %in% c(0:100),
+    Community_Years %in% c(1:40),
+    Income %in% c(0:28),
+    Gender %in% c(1,2),
+    Party_Reg %in% c(1,2,4)
+  ) %>%
+  mutate(
+    Gender = factor(Gender, labels = c("Male", "Female")),
+    Party_Reg = factor(Party_Reg, labels = c("Dem", "Rep", "None/Ind"))
+  )
+```
+
+## Hypothesis 1
+
+My first hypothesis is that warmer feelings toward Bill Clinton are associated with similar feelings toward Hillary Clinton. The null hypothesis is that there is no association. In this test the dependent variable is feeling toward Hillary Clinton and the independent variable is feeling toward Bill Clinton. 
+
+### Correlation
+
+I'll run a correlation test for the data and plot it. 
+
+```{r }
+cor.test(selected$Bill, selected$Hillary)
+
+selected %>%
+  select(Bill, Hillary) %>%
+  ggplot(aes(x = Bill, y = Hillary)) +
+  geom_jitter() + 
+  geom_smooth(method = "lm") +
+  labs(x = "Feeling Thermometer: Bill Clinton",
+       y = "Feeling Thermometer: Hillary Clinton",
+       title = "Correlation Plot of Feelings on the Clintons")
+```
+
+It looks like there is a strong (.8) and significant (p < .001) positive correlation between the two variables. Next I'll explore this correlation by building a model.
+
+### Regression
+
+Next, I'll run the `lm_mod` object from earlier and fit the relevant data. `tidy()` and `glance()`provide the same information that `summary()` does for `lm` objects.
+
+```{r lm clinton}
+lm_clinton <- lm_mod %>% # Creating a linear model for the above plot
+  fit(Hillary ~ Bill, data = selected)
+
+tidy(lm_clinton) # tidy() creates a description of the model parameters
+
+glance(lm_clinton) # glance() creates a description of the r-squared and adjusted values for the model
+
+### If I wanted to see the actual predicted values for each observation I could perform this transformation
+# selected <- selected %>%
+#   bind_cols(
+#     predict(lm_clinton, selected)
+#   )
+```
+
+The results here show that there is a significant (p < .001) relationship between respondents feelings on the Clintons. The intercept (.87) indicates that those with the coolest possible feeling toward Bill will also have cool feelings toward Hillary. For each one point increase in feeling toward Bill, the feeling toward Hillary will increase by .85 points. The r-squared value indicates that 64% of the variance in the thermometer values for Hillary Clinton are explained by the thermometer values for Bill Clinton. 
+
+## Hypothesis 2
+
+My second hypothesis is that respondents who have lived longer in their community will have higher incomes. The null hypothesis is that there is no relationship between the two variables. In this test the dependent variable is income and the independent variable is years lived in community. 
+
+### Correlation
+
+This is the same approach that I used for the earlier correlation. Note that the income variable is an ordinal variable, not a dollar amount. A value of 1 indicates an annual income of $5,000 or less, while a value of 25 indicates an annual income of $250,000 or more.
+
+```{r }
+cor.test(selected$Community_Years, selected$Income)
+
+selected %>%
+  select(Community_Years, Income) %>%
+  ggplot(aes(x = Community_Years, y = Income)) +
+  geom_jitter() +
+  geom_smooth(method = "lm") +
+  labs(x = "Years Spent in Current Community", y = "Income",
+       title = "Correlation Plot for Time Lived in Community and Income")
+```
+
+This correlation is neither strong (-.02) nor significant (p ~ .22), let's further explore this relationship (or lackthereof) using regression.
+
+### Regression
+
+This is the same approach that I used for the previous regression model.
+
+```{r lm community_income}
+lm_income <- lm_mod %>%
+  fit(Income ~ Community_Years, data = selected)
+
+tidy(lm_income)
+
+glance(lm_income)
+```
+
+These results show that there is no significant relationship (p ~ .22) between the number of years a respondent has lived in their community and their income. The resulting r-squared value is negligible (rsq < .001), meaning that years lived in the community has almost no explanatory power on a respondent's income. 
+
+# Further Exploration of Hypothesis 1
+
+I will further explore the hypothesis that there is a relationship between feelings toward Bill and Hillary by controlling for gender and party registration. In this test the baseline comparison is a male democrat.
+
+```{r }
+lm_clinton_2 <- lm_mod %>%
+  fit(Hillary ~ Bill + Gender + Party_Reg, data = selected)
+
+tidy(lm_clinton_2)
+
+glance(lm_clinton_2)
+```
+
+Here we can see a significant relationship. Every variable included is associated with a significant p-value (p < .001). By controlling for gender and party registration we can see that the baseline comparison, a male democrat, will feel less cool toward Hillary than Bill even when scoring Bill a 0 on the feeling thermometer (intercept = 16.2). For each one-point increase in the feeling thermometer on Bill we can predict a .69 increase in the feeling thermometer toward Hillary for the baseline group. If the respondent is a female that relationship increases by almost four (3.92). Republicans and Independents/Unaffiliated voters are predicted in this model to rate Hillary -20 and -12 points lower than Bill than Democrats would, respectively (-20.3, -11.7). 
+
+Considering the r-squared value of .69, an increase from the bi-variate model, this is a better predictive model than the first version. However, there is still a 30% variance in the actual compared to the predicted values. I could probably improve this model by controlling for income (V161361x), ideology (V161126), and/or how they feel about using military force to solve international problems (V161154). 
