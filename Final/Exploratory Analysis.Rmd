@@ -1,32 +1,83 @@
 ---
-title: "Property Ownership Analysis"
+title: "Exploring Geographies of Property Ownership in Chicago"
 author: "Ethan Jantz"
-date: "11/19/2020"
+date: ""
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-library(tidyverse)
-library(sf); library(geojsonsf)
-library(here)
-library(classInt)
+# Context / Literature
 
+A land trust, also known as an Illinois land trust, is a legal document that grants ownership of land and real property to a beneficiary. It allows landowners to own, sell, develop, and purchase property anonymously. This legal document was created centuries ago as a tool through which private property owners could maintain ownership of property and their privacy, allowing 15th century Englishmen to avoid the contemporary burdens of land ownership such as serving in the military. 19th century property owners in Chicago utilized land trusts to anonymously own real estate and, in the case of public officials, skirt laws prohibiting their ability to vote on city planning decisions in which they had a vested interest. Not much has changed in the 21st century, and the effects of this tool of obfuscation in the age of information have yet to be fully understood. New techniques and technologies have developed ways to unmask property ownership hidden through land trusts. This paper utilizes scraped and linked property assessment data created by members of the Chicago Democratic Socialists of America to explore multifamily property ownership in Chicago. 
+
+In performing an analysis of property ownership in Chicago I will be attempting to answer the following questions using descriptive and inferential statistics: 
+
+* Where do concentrations of high-volume property ownership occur in the city? 
+
+* Are higher concentrations of high-volume property ownership associated with gentrification?
+
+* How do different definitions of high-volume property ownership affect its analysis?
+
+To explore these questions I will be testing the following hypotheses:
+
+* Most high-volume landlords own properties in gentrifying areas.
+
+* High-volume landlords own properties in areas with a majority of renter households.
+
+* Single building owner-occupied landlords own properties in less densely populated areas.
+
+# Data
+
+The following is a brief summary of the data I will be using, the geography at which the data is organized, and the variables being used in analysis. A more thorough explanation of the data being used can be found in the discussion section. 
+
+**Property ownership data** scraped from the Cook County Assessor’s Office website, matched using taxpayer mailing addresses and taxpayer names to determine ownership. This data was then sorted through by hand to dissociate false matches and fix false negatives using the Illinois Secretary of State LLC filing database. The data is organized at the address level and was joined with a corresponding community area at the time of collection. The variables being used for this analysis are the property’s associated community area, the number of properties held by the owner, the associated owner (this can be an individual or business), owner-occupancy status, imputed unit count, and the total number of properties held by the associated owner.
+
+**Gentrification index scores** created using methods developed by the Nathalie P. Voorhees Center at UIC for the study period of 1990 to 2017. This data was pulled from the Gentrification Dashboard I developed for the Center. The Gentrification typology for this data is based on a community area’s socio-economic status compared to the city average and its change over time. This data is organized at the community area level. The variables being used for this analysis are the community area, the gentrification index type, and the population of the community area according to the American Community Survey 2017 5 year estimate.
+
+**Housing stock composition data** organized at the community area level from the DePaul Institute for Housing Studies for the year 2019. This data contains information on housing stock composition, property sales activity, mortgage activity, foreclosure filing activity, and the number of foreclosure auctions. The variables being used in this analysis are the community area and its associated proportion of single family homes, condominiums, buildings with 2 - 4 units, and buildings with 5+ units.
+
+# Methods
+
+# Setup
+
+To start I'll be loading in the packages I'll be using and importing the data. I'll also set up a linear model for fitting the data to.
+
+```{r setup, include=FALSE}
+### Dependencies
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse); library(tidymodels) # Tidy suites
+library(sf); library(geojsonsf) # Spatial packages
+library(here); library(patchwork) # Utilities
+
+### working directory
 setwd(here::here())
 
-properties <- read_csv("Nov9_FML_OwnOccUpdated.csv")
-gentrification <- read_csv("Gentrification_1990-2017.csv")
-tracts <- geojson_sf("tracts.geojson")
-community_areas <- geojson_sf("community_areas.geojson")
-evictions_commarea <- read_csv("eviction_data_comm_area.csv")
+### Data
+properties <- read_csv("data/FML/Nov9_FML_OwnOccUpdated.csv") # Property ownership data
+gentrification <- read_csv("data/Gentrification/Gentrification_1990-2017.csv") # Gentrification Index data
+housing_stock <- read_csv("data/Housing Stock/IHS_HousingStockComposition.csv") # Housing stock composition data
+community_areas <- geojson_sf("data/Boundaries/community_areas.geojson") # Shapefiles of Community Areas for mapping
+
+
+
+### Model Setup
+lm_mod <- linear_reg() %>%
+  set_engine("lm")
 ```
+
+I know I'll be doing some spatial joins with census tracts in the future, so I'm transforming the `properties` data set into spatial data using the lat/long coordinates.
+
+The `community_areas` is projected to WGS84, I want to project it to a CRS more suited for Chicago while I'm doing these spatial transformations. 
 
 ```{r spatial joins}
 properties_sf <- st_as_sf(properties, coords = c("Long", "Lat"),
                           crs = 26971, agr = "constant") # Converts the df to an sf for spatial analysis
+
+community_areas <- st_transform(community_areas, crs = 26971)
 ```
 
-```{r property ownership}
+Breaking property ownership down by owners. I want to see who owns large numbers of units and properties. After creating both continuous and categorical variables of this data I join it back to the `properties_sf` for further analysis.
+
+```{r property owners}
 property_owners <- properties %>%
   group_by(Taxpayer.Match.Code) %>%
   summarize(
@@ -61,3 +112,63 @@ properties_sf <- property_owners %>%
   right_join(properties_sf, by = "Taxpayer.Match.Code")
 ```
 
+What is the spatial distribution of high-volume landlords in Chicago? To answer this question I need to first 
+
+```{r by cca}
+properties_cca <- properties_sf %>%
+  mutate(Community.Area = toupper(Community.Area)) %>%
+  group_by(Community.Area) %>%
+  count(Properties_Owned_Cat) %>%
+  right_join(community_areas, by = c("Community.Area" = "community")) %>%
+  filter(Properties_Owned_Cat == ">15") %>%
+  ggplot(aes(geometry = geometry)) +
+  geom_sf(aes(fill = n))
+
+units_cca <- properties_sf %>%
+  mutate(Community.Area = toupper(Community.Area)) %>%
+  group_by(Community.Area) %>%
+  count(Units_Owned_Cat) %>%
+  right_join(community_areas, by = c("Community.Area" = "community")) %>%
+  filter(Units_Owned_Cat == ">100") %>%
+  ggplot(aes(geometry = geometry)) +
+  geom_sf(aes(fill = n))
+
+# properties_cca + units_cca # plots the maps side by side
+```
+
+
+
+Do counts of units associate with counts of properties? Looking at the above maps it looks to be the case.
+Note: many unit counts for buildings are imputed, but they're as accurate as we can account for at the moment. 
+
+```{r }
+ggplot(property_owners, aes(x = properties, y = units_estimate)) +
+  geom_point() +
+  geom_smooth(method = "lm") 
+```
+
+How many >15 and >100 prop/unit owners are owner-occupied?
+
+How many units are owned by >15 and >100 prop/unit owners?
+
+# Data Continued
+
+## Property Ownership Data
+
+Owner-occupied status was determined using approximate string matching methods between the taxpayer address and property address. Additional addresses associated with properties were found in the Cook County Spatial Data Portal’s Address Point dataset. Determination of owner-occupancy included these associated addresses. 
+
+Unit counts were incomplete for the dataset, so they were imputed by a volunteer using a linear model incorporating property classifications, lot square footage, and square footage provided by the Chicago Department of Buildings that was measured for accuracy using Train/Test methods. Two different models were used determined by whether square footage data was available for the property. Units with available square footage data had an RMSE of <2 units while those without had an RMSE of 17 units. The r-squared value for the former was .62, and the latter .53. 
+
+
+**Explain why some homes weren't included in the dataset (single family homes, property classifications)**
+
+**Find the percentage of total # of properties that this dataset covers.**
+
+## Gentrification Index
+
+# References 
+
+Abid, Ivy (personal communication, November 2020)
+Immergluck, Dan, Jeff Ernsthausen, Stephanie Earl, and Allison Powell. “Evictions, Large Owners, and Serial Filings: Findings from Atlanta.” *Housing Studies* 35, no. 5 (May 27, 2020): 903–24. https://doi.org/10.1080/02673037.2019.1639635.
+Nolan, Lauren. “The Socioeconomic Change of Chicago’s Community Areas (1970-2010),” n.d., 31.
+Raymond, Elora Lee, Richard Duckworth, Benjamin Miller, Michael Lucas, and Shiraj Pokharel. “From Foreclosure to Eviction: Housing Insecurity in Corporate-Owned Single-Family Rentals.” *Cityscape: A Journal of Policy Development and Research* 20, no. 3 (2018): 159–88.
