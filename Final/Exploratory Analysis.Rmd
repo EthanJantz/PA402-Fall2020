@@ -19,7 +19,7 @@ In performing an analysis of property ownership in Chicago I will be attempting 
 
 To explore these questions I will be testing the following hypotheses:
 
-* Most high-volume landlords own properties in gentrifying areas.
+* High concentrations of properties owned by high-volume property owners in a community area are associated with higher shares of households living under poverty, higher shares of black residents, and higher shares of renter-occupied households.
 
 * High-volume landlords own properties in areas with a majority of renter households.
 
@@ -29,15 +29,64 @@ To explore these questions I will be testing the following hypotheses:
 
 The following is a brief summary of the data I will be using, the geography at which the data is organized, and the variables being used in analysis. A more thorough explanation of the data being used can be found in the discussion section. 
 
-**Property ownership data** scraped from the Cook County Assessor’s Office website, matched using taxpayer mailing addresses and taxpayer names to determine ownership. This data was then sorted through by hand to dissociate false matches and fix false negatives using the Illinois Secretary of State LLC filing database. The data is organized at the address level and was joined with a corresponding community area at the time of collection. The variables being used for this analysis are the property’s associated community area, the number of properties held by the owner, the associated owner (this can be an individual or business), owner-occupancy status, imputed unit count, and the total number of properties held by the associated owner.
+**Property ownership data** scraped from the Cook County Assessor’s Office website, matched using taxpayer mailing addresses and taxpayer names to determine ownership. This data was then sorted through by hand to dissociate false matches using the Illinois Secretary of State LLC filing database. The data is organized at the address level and was joined with a corresponding community area at the time of collection. The variables being used for this analysis are the property’s associated community area, the number of properties held by the owner, the associated owner (this can be an individual or business), owner-occupancy status, imputed unit count, and the total number of properties held by the associated owner.
 
-**Gentrification index scores** created using methods developed by the Nathalie P. Voorhees Center at UIC for the study period of 1990 to 2017. This data was pulled from the Gentrification Dashboard I developed for the Center. The Gentrification typology for this data is based on a community area’s socio-economic status compared to the city average and its change over time. This data is organized at the community area level. The variables being used for this analysis are the community area, the gentrification index type, and the population of the community area according to the American Community Survey 2017 5 year estimate.
+<!-- **Gentrification index scores** created using methods developed by the Nathalie P. Voorhees Center at UIC for the study period of 1990 to 2017. This data was pulled from the [Gentrification Dashboard](https://ethanjantz.shinyapps.io/Gentrification_Index/) I developed for the Center. The Gentrification typology for this data is based on a community area’s socio-economic status compared to the city average and its change over time. This data is organized at the community area level. The variables being used for this analysis are the community area, the gentrification index type, and the population of the community area according to the American Community Survey 2017 5 year estimate. -->
 
-**Housing stock composition data** organized at the community area level from the DePaul Institute for Housing Studies for the year 2019. This data contains information on housing stock composition, property sales activity, mortgage activity, foreclosure filing activity, and the number of foreclosure auctions. The variables being used in this analysis are the community area and its associated proportion of single family homes, condominiums, buildings with 2 - 4 units, and buildings with 5+ units.
+**Housing stock composition data** organized at the community area level from the [DePaul Institute for Housing Studies](https://www.housingstudies.org/data-portal/) for the year 2019. This data contains information on housing stock composition, property sales activity, mortgage activity, foreclosure filing activity, and the number of foreclosure auctions. The variables being used in this analysis are the community area, its associated proportion of single family homes, condominiums, buildings with 2 - 4 units, and buildings with 5+ units; and its share of owner-occupied, renter-occupied, and total number of households. 
 
 # Methods
 
-# Setup
+There are two ways that I will be defining high-volume property ownership in this analysis. A property owner is considered to be high-volume if they own more than 15 properties **or** they control more than 100 units. The first definition is based on research done by Immergluck (2020) on property ownership in Atlanta. The unit definition is one defined by myself. In analyzing property ownership I aim to discuss its effects on households and that is best reflected in the number of units and not properties, since a property could host anywhere from 1 to 100+ units. Each analysis will be performed using both definitions and the results compared.
+
+Finding neighborhood density for each Chicago community area (CCA) will be done by taking the total number of households and dividing it by the area of the CCA. The result will be a households per square mile measurement for each CCA, which will be used to answer questions related to density.
+
+## Comparing High-Volume Ownership and Socio-Economic Characteristics
+
+Performing an analysis relating high-volume property ownership to gentrification requires statistical methods that I have not learned yet. Gentrification typologies are categorical data, and using these categories in a regression to explain high-volume property ownership concentrations would require the use of a generalized linear model. Instead, I will be performing a simple linear regression using variables that are used to determine the gentrification index. The variables being used in this analysis are the CCA's share of households living below poverty, the share of African American households, and the share of renter-occupied households. 
+
+
+
+
+
+## Comparing High-Volume Ownership and Sales Activity
+
+Regression - Share of high-volume landlord owned properties ~ Average Residential Property Sales per 100 Residential Parcels, 2015 - 2019
+
+## Comparing Owner-Occupancy and Household Density
+
+Regression - Share of single building owner-occupied properties ~ household density
+
+# Results
+
+# Discussion
+
+## Data - Continued
+
+### Property Ownership Data
+
+Owner-occupied status was determined using approximate string matching methods between the taxpayer address and property address. Additional addresses associated with properties were found in the Cook County Spatial Data Portal’s Address Point dataset. Determination of owner-occupancy included these associated addresses. When an association was made between these addresses the Owner Occupancy status was set to owner-occupied, and if the associated owner owned more than one property they were classified as "multiple building, owner-occupied", while property owners with ownership of one building were classified as "single building, owner-occupied."
+
+Unit counts were incomplete for the dataset, so they were imputed by a volunteer using a linear model incorporating property classifications, lot square footage, and square footage provided by the Chicago Department of Buildings that was measured for accuracy using Train/Test methods. Two different models were used determined by whether square footage data was available for the property. Units with available square footage data had an RMSE of <2 units while those without had an RMSE of 17 units. The r-squared value for the former was .62, and the latter .53. 
+
+
+**Explain why some homes weren't included in the dataset (single family homes, property classifications)**
+
+**Find the percentage of total # of properties that this dataset covers.**
+
+### Gentrification Index
+
+### Housing Stock Composition
+
+# Conclusion
+
+# References 
+
+Abid, Ivy (personal communication, November 2020)
+Immergluck, Dan, Jeff Ernsthausen, Stephanie Earl, and Allison Powell. “Evictions, Large Owners, and Serial Filings: Findings from Atlanta.” *Housing Studies* 35, no. 5 (May 27, 2020): 903–24. https://doi.org/10.1080/02673037.2019.1639635.
+Nolan, Lauren. “The Socioeconomic Change of Chicago’s Community Areas (1970-2010),” n.d., 31.
+
+# Appendix I - Analysis Scripting
 
 To start I'll be loading in the packages I'll be using and importing the data. I'll also set up a linear model for fitting the data to.
 
@@ -46,31 +95,50 @@ To start I'll be loading in the packages I'll be using and importing the data. I
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse); library(tidymodels) # Tidy suites
 library(sf); library(geojsonsf) # Spatial packages
-library(here); library(patchwork) # Utilities
+library(here); library(patchwork); library(gt) # Utilities
 
 ### working directory
 setwd(here::here())
 
 ### Data
 properties <- read_csv("data/FML/Nov9_FML_OwnOccUpdated.csv") # Property ownership data
-gentrification <- read_csv("data/Gentrification/Gentrification_1990-2017.csv") # Gentrification Index data
-housing_stock <- read_csv("data/Housing Stock/IHS_HousingStockComposition.csv") # Housing stock composition data
+# gentrification <- read_csv("data/Gentrification/Gentrification_1990-2017.csv") # Gentrification Index data
+depaul_ihs <- read_csv("data/DePaul IHS/IHS_HousingStockComposition.csv") # Housing stock composition data
 community_areas <- geojson_sf("data/Boundaries/community_areas.geojson") # Shapefiles of Community Areas for mapping
-
-
 
 ### Model Setup
 lm_mod <- linear_reg() %>%
   set_engine("lm")
+
+### Misc Cleaning 
+depaul_ihs <- depaul_ihs %>%
+  mutate(
+    Community.Area = toupper(Geography),
+    Community.Area = ifelse(Community.Area == "O'HARE", "OHARE", Community.Area),
+    Share_nonwhite = `Share of Population that is African American` + `Share of Population that is Hispanic or Latino` + `Share of Population that is Asian` + `Share of Population that is Some Other Race`,
+    share_black = `Share of Population that is African American`
+  ) %>%
+  filter(
+    Community.Area != "CHICAGO TOTAL"
+  )
+
+properties <- properties %>%
+  mutate(Owner.Occupancy = factor(Owner.Occupancy))
+
+# gentrification <- gentrification %>%
+#   mutate(
+#     type = factor(type),
+#     CCA = ifelse(CCA == "O'HARE", "OHARE", CCA)
+#     )
 ```
 
 I know I'll be doing some spatial joins with census tracts in the future, so I'm transforming the `properties` data set into spatial data using the lat/long coordinates.
 
-The `community_areas` is projected to WGS84, I want to project it to a CRS more suited for Chicago while I'm doing these spatial transformations. 
+`community_areas` is projected to WGS84, I want to project it to a CRS more suited for Chicago while I'm doing these spatial transformations. 
 
-```{r spatial joins}
+```{r spatial changes}
 properties_sf <- st_as_sf(properties, coords = c("Long", "Lat"),
-                          crs = 26971, agr = "constant") # Converts the df to an sf for spatial analysis
+                          crs = 26971, agr = "constant")
 
 community_areas <- st_transform(community_areas, crs = 26971)
 ```
@@ -78,7 +146,7 @@ community_areas <- st_transform(community_areas, crs = 26971)
 Breaking property ownership down by owners. I want to see who owns large numbers of units and properties. After creating both continuous and categorical variables of this data I join it back to the `properties_sf` for further analysis.
 
 ```{r property owners}
-property_owners <- properties %>%
+property_owners <- properties %>% 
   group_by(Taxpayer.Match.Code) %>%
   summarize(
     properties = n_distinct(Property.Index.Number),
@@ -86,22 +154,22 @@ property_owners <- properties %>%
       properties == 1 ~ "1",
       properties >= 2 & properties <= 5 ~ "2 - 5",
       properties >= 6 & properties <= 15 ~ "6 - 15",
-      TRUE ~ ">15"
-    ) %>% factor(),
+      properties > 15 ~ ">15"
+    ) %>% factor(levels = c("1", "2 - 5", "6 - 15", ">15")),
     units_estimate = sum(Relative.Size),
     units_cat = case_when(
       units_estimate == 1 ~ "1",
       units_estimate >= 2 & units_estimate <= 4 ~ "2 - 4",
       units_estimate >= 5 & units_estimate <= 12 ~ "5 - 12",
-      units_estimate >= 12 & units_estimate <= 30 ~ "12 - 30",
-      units_estimate >= 30 & units_estimate <= 99 ~ "30 - 99",
+      units_estimate >= 13 & units_estimate <= 30 ~ "13 - 30",
+      units_estimate >= 31 & units_estimate <= 100 ~ "31 - 100",
       units_estimate >= 100 ~ ">100"
-    ) %>% factor(),
+    ) %>% factor(levels = c("1", "2 - 4", "5 - 12", "13 - 30", "31 - 100", ">100")),
     affiliated_owner = Affiliated.With
     ) %>%
   unique()
 
-summary(property_owners)
+# summary(property_owners)
 
 properties_sf <- property_owners %>%
   select(Taxpayer.Match.Code, 
@@ -112,34 +180,72 @@ properties_sf <- property_owners %>%
   right_join(properties_sf, by = "Taxpayer.Match.Code")
 ```
 
-What is the spatial distribution of high-volume landlords in Chicago? To answer this question I need to first 
+# Property Ownership by CCA
+
+What is the spatial distribution of high-volume landlords in Chicago? To answer this question I need to first calculate the number of properties owned by different groupings of volume for each CCA.
 
 ```{r by cca}
 properties_cca <- properties_sf %>%
   mutate(Community.Area = toupper(Community.Area)) %>%
   group_by(Community.Area) %>%
   count(Properties_Owned_Cat) %>%
+  pivot_wider(names_from = Properties_Owned_Cat, values_from = n, values_fill = 0) %>%
   right_join(community_areas, by = c("Community.Area" = "community")) %>%
-  filter(Properties_Owned_Cat == ">15") %>%
-  ggplot(aes(geometry = geometry)) +
-  geom_sf(aes(fill = n))
+  mutate(Total_Props = `1` + `2 - 5` + `6 - 15` + `>15`)
+  
+properties_cca <- properties_cca %>%
+  select(Community.Area, area_num_1, `1`, `2 - 5`, `6 - 15`, `>15`, Total_Props, shape_area, geometry)
 
 units_cca <- properties_sf %>%
   mutate(Community.Area = toupper(Community.Area)) %>%
   group_by(Community.Area) %>%
   count(Units_Owned_Cat) %>%
+  pivot_wider(names_from = Units_Owned_Cat, values_from = n, values_fill = 0) %>%
   right_join(community_areas, by = c("Community.Area" = "community")) %>%
-  filter(Units_Owned_Cat == ">100") %>%
-  ggplot(aes(geometry = geometry)) +
-  geom_sf(aes(fill = n))
+  mutate(Total_Units = `1` + `2 - 4` + `5 - 12` + `13 - 30` + `31 - 100` + `>100`)
 
-# properties_cca + units_cca # plots the maps side by side
+units_cca <- units_cca %>%
+  select(Community.Area, area_num_1, `1`:`>100`, Total_Units, shape_area, geometry)
 ```
 
+Joining CCA level data to the IHS data.
+
+```{r }
+prop_cca_full <- properties_cca %>%
+  # right_join(gentrification, by = c("Community.Area" = "CCA"))  %>%
+  right_join(depaul_ihs) 
 
 
-Do counts of units associate with counts of properties? Looking at the above maps it looks to be the case.
-Note: many unit counts for buildings are imputed, but they're as accurate as we can account for at the moment. 
+units_cca_full <- units_cca %>%
+  right_join(depaul_ihs) #%>%
+  # right_join(gentrification, by = c("Community.Area" = "CCA"))
+```
+
+```{r }
+prop_cca_plot <- properties_cca %>%
+  ggplot(aes(geometry = geometry)) +
+  geom_sf(aes(fill = `>15`))
+
+units_cca_plot <- units_cca %>%
+  ggplot(aes(geometry = geometry)) +
+  geom_sf(aes(fill = `>100`))
+
+prop_cca_plot + units_cca_plot
+```
+
+# Summary of Property Ownership
+
+Do counts of units associate with counts of properties? 
+
+```{r }
+lm_prop_unit <- lm_mod %>%
+  fit(units_estimate ~ properties, data = property_owners)
+
+tidy(lm_prop_unit)
+glance(lm_prop_unit)
+```
+
+With a high level of significance (p < .001), for every property an owner controls they are predicted to control 10.4 units. Approximately 34% of the variance in unit counts can be explained by the number of properties owned. 
 
 ```{r }
 ggplot(property_owners, aes(x = properties, y = units_estimate)) +
@@ -149,26 +255,249 @@ ggplot(property_owners, aes(x = properties, y = units_estimate)) +
 
 How many >15 and >100 prop/unit owners are owner-occupied?
 
+```{r }
+hivol_prop_ownocc <- properties_sf %>%
+  filter(
+    Properties_Owned > 15, Owner.Occupancy == "Multiple building, owner-occupied"
+  )
+
+hivol_unit_ownocc <- properties_sf %>%
+  filter(
+    Units_Owned_Estimate > 100, Owner.Occupancy == "Multiple building, owner-occupied"
+  )
+```
+
+215 properties owned by property owners with more than 15 properties are owner-occupied. 
+
 How many units are owned by >15 and >100 prop/unit owners?
 
-# Data Continued
+```{r }
+hivol_prop <- properties_sf %>%
+  filter(Properties_Owned > 15) 
 
-## Property Ownership Data
+hivol_unit <- properties_sf %>%
+  filter(Units_Owned_Estimate > 100)
+```
 
-Owner-occupied status was determined using approximate string matching methods between the taxpayer address and property address. Additional addresses associated with properties were found in the Cook County Spatial Data Portal’s Address Point dataset. Determination of owner-occupancy included these associated addresses. 
+Property owners who own more than 15 rental properties own 10110 rental properties in Chicago, or `r round(10110/129908, 2) * 100`% of the total number of properties in the data set. 
 
-Unit counts were incomplete for the dataset, so they were imputed by a volunteer using a linear model incorporating property classifications, lot square footage, and square footage provided by the Chicago Department of Buildings that was measured for accuracy using Train/Test methods. Two different models were used determined by whether square footage data was available for the property. Units with available square footage data had an RMSE of <2 units while those without had an RMSE of 17 units. The r-squared value for the former was .62, and the latter .53. 
+Property owners who control more than 100 rental units own 11201 rental properties in Chicago, or `r round(11201/129908, 2) * 100`% of the total number of properties in the data set. 
+
+# Concentrations of High-Volume Ownership
+
+```{r }
+conc_hivol_prop_cca <- prop_cca_full %>%
+  group_by(Community.Area) %>%
+  summarize(
+    hivol = `>15`,
+    perc_hivol = `>15` / Total_Props,
+    perc_rent = `Share of Households that are Renter-Occupied`,
+    total_households = `Total Households`,
+    geometry = geometry
+  )
+
+conc_hivol_unit_cca <- units_cca_full %>%
+  group_by(Community.Area) %>%
+  summarize(
+    hivol = `>100`,
+    perc_hivol = `>100` / Total_Units,
+    perc_rent = `Share of Households that are Renter-Occupied`,
+    total_households = `Total Households`,
+    geometry = geometry
+  )
+```
+
+```{r }
+hivol_prop_cca_plot <- conc_hivol_prop_cca %>%
+  ggplot(aes(x = Community.Area, y = perc_hivol)) +
+  geom_col() +
+  coord_flip()
+
+hivol_prop_cca_map <- conc_hivol_prop_cca %>%
+  ggplot(aes(geometry = geometry)) +
+  geom_sf(aes(fill = perc_hivol))
+
+hivol_prop_cca_plot
+hivol_prop_cca_map
+
+hivol_unit_cca_plot <- conc_hivol_unit_cca %>%
+  ggplot(aes(x = Community.Area, y = perc_hivol)) +
+  geom_col() +
+  coord_flip()
+
+hivol_unit_cca_map <- conc_hivol_unit_cca %>%
+  ggplot(aes(geometry = geometry)) +
+  geom_sf(aes(fill = perc_hivol))
+
+hivol_unit_cca_plot
+hivol_unit_cca_map
+```
+
+# High-Volume Property Ownership and Socio-Economic Variables
+
+Is there a relationship between high-volume property ownership and socio-economic variables?
+
+Regression - Share of high-volume landlord owned properties ~ share of households under poverty + share of minority households + share of renter tenure
 
 
-**Explain why some homes weren't included in the dataset (single family homes, property classifications)**
+```{r }
+socecon_hivol_props_cca <-prop_cca_full %>%
+  group_by(Community.Area) %>%
+  summarize(
+    hivol = sum(`>15`),
+    total = sum(Total_Props),
+    perc_hivol = hivol / total,
+    black = share_black,
+    nonwhite = Share_nonwhite,
+    poverty = `Share of Population that is under the Poverty Level`,
+    renter = `Share of Households that are Renter-Occupied`
+    )
 
-**Find the percentage of total # of properties that this dataset covers.**
+socecon_hivol_unit_cca <- units_cca_full %>%
+  group_by(Community.Area) %>%
+  summarize(
+    hivol = sum(`>100`),
+    total = sum(Total_Units),
+    perc_hivol = hivol / total,
+    nonwhite = Share_nonwhite,
+    black = share_black,
+    poverty = `Share of Population that is under the Poverty Level`,
+    renter = `Share of Households that are Renter-Occupied`
+  )
+```
 
-## Gentrification Index
+```{r }
+lm_socecon_prop <- lm_mod %>%
+  fit(perc_hivol ~ black + poverty + renter, data = socecon_hivol_props_cca)
 
-# References 
+lm_socecon_unit <- lm_mod %>%
+  fit(perc_hivol ~ black + poverty + renter, data = socecon_hivol_unit_cca)
 
-Abid, Ivy (personal communication, November 2020)
-Immergluck, Dan, Jeff Ernsthausen, Stephanie Earl, and Allison Powell. “Evictions, Large Owners, and Serial Filings: Findings from Atlanta.” *Housing Studies* 35, no. 5 (May 27, 2020): 903–24. https://doi.org/10.1080/02673037.2019.1639635.
-Nolan, Lauren. “The Socioeconomic Change of Chicago’s Community Areas (1970-2010),” n.d., 31.
-Raymond, Elora Lee, Richard Duckworth, Benjamin Miller, Michael Lucas, and Shiraj Pokharel. “From Foreclosure to Eviction: Housing Insecurity in Corporate-Owned Single-Family Rentals.” *Cityscape: A Journal of Policy Development and Research* 20, no. 3 (2018): 159–88.
+tidy(lm_socecon_prop)
+glance(lm_socecon_prop)
+
+tidy(lm_socecon_unit)
+glance(lm_socecon_unit)
+```
+
+```{r }
+poverty_hivol_props_plot <- socecon_hivol_props_cca %>%
+  ggplot(aes(x = poverty, y = perc_hivol)) + 
+  geom_point() +
+  geom_smooth(method = "lm")
+
+renter_hivol_props_plot <- socecon_hivol_props_cca %>%
+  ggplot(aes(x = renter, y = perc_hivol)) + 
+  geom_point() +
+  geom_smooth(method = "lm")
+
+poverty_hivol_unit_plot <- socecon_hivol_unit_cca %>%
+  ggplot(aes(x = poverty, y = perc_hivol)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+renter_hivol_unit_plot <- socecon_hivol_unit_cca %>%
+  ggplot(aes(x = renter, y = perc_hivol)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+(poverty_hivol_props_plot | renter_hivol_props_plot) / (poverty_hivol_unit_plot | renter_hivol_unit_plot)
+```
+
+# Residential Density and Owner-Occupancy
+
+```{r }
+OwnOcc_cca <- properties_sf %>% # Find counts of single building owner-occupied properties
+  group_by(Community.Area) %>%
+  count(OwnOcc = Owner.Occupancy == "Single building, owner-occupied") %>%
+  mutate(
+    Total = sum(n),
+    Community.Area = toupper(Community.Area)
+         ) %>%
+  filter(OwnOcc == TRUE) %>%
+  mutate(OwnOcc = n) %>%
+  select(Community.Area, OwnOcc, Total)
+  
+
+OwnOcc_cca <- OwnOcc_cca %>% # Joining to spatial and housing stock data
+  right_join(depaul_ihs) %>%
+  right_join(community_areas, by = c("Community.Area" = "community"))
+
+OwnOcc_cca <- OwnOcc_cca  %>% # Setting up final dataset
+  mutate(
+    area = st_area(geometry),
+    perc_ownocc = OwnOcc / Total,
+    HH_per_meter_sq_tenthousands = as.numeric((`Total Households` / area) * 10000)
+    ) %>%
+  select(Community.Area, OwnOcc, Total, perc_ownocc, `Total Households`, HH_per_meter_sq_tenthousands, area, geometry)
+```
+
+```{r }
+lm_ownocc_density <- lm_mod %>%
+  fit(perc_ownocc ~ HH_per_meter_sq_tenthousands, data = OwnOcc_cca)
+
+tidy(lm_ownocc_density)
+glance(lm_ownocc_density)
+```
+
+```{r }
+OwnOcc_cca_plot <- OwnOcc_cca %>%
+  ggplot(aes(x = HH_per_meter_sq_tenthousands, y = perc_ownocc)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+```
+
+# High-volume Property Ownership and Residential Sales Activity
+
+```{r }
+sales_prop_cca <- prop_cca_full %>%
+  group_by(Community.Area) %>%
+  summarize(
+    hivol = `>15`,
+    perc_hivol = `>15` / Total_Props,
+    perc_rent = `Share of Households that are Renter-Occupied`,
+    sales_5yr_avg = `Average Yearly Property Sales Activity 2015 - 2019 - Sales per 100 Residential Parcels`,
+    total_households = `Total Households`,
+    geometry = geometry
+  )
+
+sales_unit_cca <- units_cca_full %>%
+  group_by(Community.Area) %>%
+  summarize(
+    hivol = `>100`,
+    perc_hivol = `>100` / Total_Units,
+    perc_rent = `Share of Households that are Renter-Occupied`,
+    sales_5yr_avg = `Average Yearly Property Sales Activity 2015 - 2019 - Sales per 100 Residential Parcels`,
+    total_households = `Total Households`,
+    geometry = geometry
+  )
+```
+
+```{r }
+lm_sales_prop <- lm_mod %>%
+  fit(perc_hivol ~ sales_5yr_avg, data = sales_prop_cca)
+
+lm_sales_unit <- lm_mod %>%
+  fit(perc_hivol ~ sales_5yr_avg, data = sales_unit_cca)
+
+tidy(lm_sales_prop)
+glance(lm_sales_prop)
+
+tidy(lm_sales_unit)
+glance(lm_sales_unit)
+```
+
+```{r }
+sales_prop_cca_plot <- sales_prop_cca %>%
+  ggplot(aes(x = sales_5yr_avg, y = perc_hivol)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+sales_unit_cca_plot <- sales_unit_cca %>%
+  ggplot(aes(x = sales_5yr_avg, y = perc_hivol)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+sales_prop_cca_plot + sales_unit_cca_plot
+```
