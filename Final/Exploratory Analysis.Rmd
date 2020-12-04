@@ -1,8 +1,10 @@
 ---
 title: "Exploring Geographies of Property Ownership in Chicago"
 author: "Ethan Jantz"
-date: ""
-output: html_document
+date: ''
+output:
+  word_document: default
+  html_document: default
 ---
 
 # Context / Literature
@@ -39,23 +41,25 @@ The following is a brief summary of the data I will be using, the geography at w
 
 There are two ways that I will be defining high-volume property ownership in this analysis. A property owner is considered to be high-volume if they own more than 15 properties **or** they control more than 100 units. The first definition is based on research done by Immergluck (2020) on property ownership in Atlanta. The unit definition is one defined by myself. In analyzing property ownership I aim to discuss its effects on households and that is best reflected in the number of units and not properties, since a property could host anywhere from 1 to 100+ units. Each analysis will be performed using both definitions and the results compared.
 
-Finding neighborhood density for each Chicago community area (CCA) will be done by taking the total number of households and dividing it by the area of the CCA. The result will be a households per square mile measurement for each CCA, which will be used to answer questions related to density.
+# Rental Property Ownership in Chicago
+
+## Property Ownership
+
+## Community Area Aggregation
 
 ## Comparing High-Volume Ownership and Socio-Economic Characteristics
 
 Performing an analysis relating high-volume property ownership to gentrification requires statistical methods that I have not learned yet. Gentrification typologies are categorical data, and using these categories in a regression to explain high-volume property ownership concentrations would require the use of a generalized linear model. Instead, I will be performing a simple linear regression using variables that are used to determine the gentrification index. The variables being used in this analysis are the CCA's share of households living below poverty, the share of African American households, and the share of renter-occupied households. 
 
+## Comparing Owner-Occupancy and Household Density
 
+Regression - Share of single building owner-occupied properties ~ household density
 
-
+Finding neighborhood density for each Chicago community area (CCA) will be done by taking the total number of households and dividing it by the area of the CCA. The result will be a households per square mile measurement for each CCA, which will be used to answer questions related to density.
 
 ## Comparing High-Volume Ownership and Sales Activity
 
 Regression - Share of high-volume landlord owned properties ~ Average Residential Property Sales per 100 Residential Parcels, 2015 - 2019
-
-## Comparing Owner-Occupancy and Household Density
-
-Regression - Share of single building owner-occupied properties ~ household density
 
 # Results
 
@@ -83,7 +87,9 @@ Unit counts were incomplete for the dataset, so they were imputed by a volunteer
 # References 
 
 Abid, Ivy (personal communication, November 2020)
+
 Immergluck, Dan, Jeff Ernsthausen, Stephanie Earl, and Allison Powell. “Evictions, Large Owners, and Serial Filings: Findings from Atlanta.” *Housing Studies* 35, no. 5 (May 27, 2020): 903–24. https://doi.org/10.1080/02673037.2019.1639635.
+
 Nolan, Lauren. “The Socioeconomic Change of Chicago’s Community Areas (1970-2010),” n.d., 31.
 
 # Appendix I - Analysis Scripting
@@ -269,6 +275,8 @@ hivol_unit_ownocc <- properties_sf %>%
 
 215 properties owned by property owners with more than 15 properties are owner-occupied. 
 
+288 properties owned by property owners with control of more than 100 units are owner-occupied.
+
 How many units are owned by >15 and >100 prop/unit owners?
 
 ```{r }
@@ -290,6 +298,7 @@ conc_hivol_prop_cca <- prop_cca_full %>%
   group_by(Community.Area) %>%
   summarize(
     hivol = `>15`,
+    total_props = Total_Props,
     perc_hivol = `>15` / Total_Props,
     perc_rent = `Share of Households that are Renter-Occupied`,
     total_households = `Total Households`,
@@ -300,6 +309,7 @@ conc_hivol_unit_cca <- units_cca_full %>%
   group_by(Community.Area) %>%
   summarize(
     hivol = `>100`,
+    total_props = Total_Units,
     perc_hivol = `>100` / Total_Units,
     perc_rent = `Share of Households that are Renter-Occupied`,
     total_households = `Total Households`,
@@ -380,6 +390,8 @@ tidy(lm_socecon_unit)
 glance(lm_socecon_unit)
 ```
 
+For both definitions of high-volume property ownership, two variables have a significant explanatory power in the response variable. The share of households in a CCA living under the poverty line has a significant negative association with high-volume property ownership (p < .05). The share of renter-occupied households in a CCA has a significant positive association with high-volume property ownership (p < .001). These relationships were stronger when using the unit control model than the property count model, but the adjusted r-squared value was smaller. 18% of the variance in the response variable was explained by the independent variables for property count model compared to 16% of the variance in the unit control model.
+
 ```{r }
 poverty_hivol_props_plot <- socecon_hivol_props_cca %>%
   ggplot(aes(x = poverty, y = perc_hivol)) + 
@@ -432,6 +444,7 @@ OwnOcc_cca <- OwnOcc_cca  %>% # Setting up final dataset
   select(Community.Area, OwnOcc, Total, perc_ownocc, `Total Households`, HH_per_meter_sq_tenthousands, area, geometry)
 ```
 
+
 ```{r }
 lm_ownocc_density <- lm_mod %>%
   fit(perc_ownocc ~ HH_per_meter_sq_tenthousands, data = OwnOcc_cca)
@@ -439,6 +452,8 @@ lm_ownocc_density <- lm_mod %>%
 tidy(lm_ownocc_density)
 glance(lm_ownocc_density)
 ```
+
+Household density was determined using the number of households in a CCA and the total area of the CCA boundary in square meters. In the resulting model a significant negative association was found between household density and concentrations of single building owner-occupied rental properties. (p < .05) Only 6% of the variance in the response variable was explained by the independent variable in this model. 
 
 ```{r }
 OwnOcc_cca_plot <- OwnOcc_cca %>%
@@ -487,6 +502,8 @@ glance(lm_sales_prop)
 tidy(lm_sales_unit)
 glance(lm_sales_unit)
 ```
+
+A significant positive association was found between residential sales activity and concentrations of properties owned by high-volume property owners in both models. (p < .01) The association was stronger in the unit model than the property model, but both models had similar adjusted r-squared values indicating similar explanatory power around 11%.
 
 ```{r }
 sales_prop_cca_plot <- sales_prop_cca %>%
